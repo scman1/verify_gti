@@ -1,5 +1,5 @@
 #
-# Ground thruth image files preprocessing
+# Ground thruth image files verfication preprocessing
 # A set of procedures for  verifying that the ground truth datasets
 # are suitable for training  NHM semantic segmentation network
 # 
@@ -10,6 +10,7 @@
 # Author: Abraham Nieva de la Hidalga
 # Project: ICEDIG
 #
+# Language: Python 3.6.6
 
 from PIL import Image
 from pathlib import Path
@@ -192,8 +193,8 @@ def pixel_sizes(directory, width_to, height_to ):
         s_filename = str(filename_ins)
         img = Image.open(str(s_filename))
         width,height = img.size
-        #if height!=height_to or width != width_to:
-        print("out of range", filename_ins.name, height, width)
+        if height!=height_to or width != width_to:
+            print("out of range", filename_ins.name, height, width)
 
 def get_unique_colours(img):
     aimg= numpy.asarray(img)
@@ -279,19 +280,19 @@ def verify_label_colors(dest_dir):
         if len(colours)>4:
             print(dest_filename.name, colours, len(colours), "needs correcting colours")
             correct_label_colours(dest_filename)
-    #    else:
-    #        print(dest_filename.name, len(colours), "ok")
+        else:
+            print(dest_filename.name, len(colours), "ok")
     #    if counter > 90:
     #        break
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 # change colours with counts smaller than 500 to the background colour
-def correctcolors(dest_filename):
-    img_labels = cv2.imread(str(filename_labels), cv2.IMREAD_COLOR)
-    height,width,channels = img_labels.shape
+def correct_instance_colors(filename_labels):
+    img_instances = cv2.imread(str(filename_labels), cv2.IMREAD_COLOR)
+    height,width,channels = img_instances.shape
     
 
-    colorlist=get_colour_count(img_labels)
+    colorlist=get_colour_count(img_instances)
     #print("initial colour count", len(colorlist))
     #print(colorlist)
     bigcolors ={}
@@ -301,12 +302,12 @@ def correctcolors(dest_filename):
             countuniques += 1
         else:
             bigcolors[color]=colorlist[color]
-    img2 = img_labels
+    img2 = img_instances
     background = (0, 0, 0)
     for i in range(height):
         for j in range (width):
             color = img2[i,j]
-            if not (color in bigcolors):
+            if not (tuple(color) in bigcolors):
                 img2[i,j] = background
     cv2.imwrite(str(filename_labels),img2)
 
@@ -321,7 +322,7 @@ def verify_instance_borders(dest_dir):
         if len(colours)>20:
             #print(dest_filename.name, colours, len(colours), "needs correcting colours")
             print(dest_filename.name, len(colours), "needs correcting colours")
-            correct_label_colours(dest_filename)
+            correct_instance_colors(dest_filename)
         else:
             print(dest_filename.name, len(colours), "ok")
     #    if counter > 90:
@@ -329,33 +330,33 @@ def verify_instance_borders(dest_dir):
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 # Directory containing the new set of segmented images
-source_dir = Path(Path().absolute().parent, "herbariumsheets","sample02")
+source_dir = Path(Path().absolute().parent, "herbariumsheets","sample02", "ignore")
 # Directory for processing and verifying the new set of segmented images
 dest_dir = Path(Path().absolute().parent, "herbariumsheets", "sample02b")
 # Directory containing the already used set of segmented images
 used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets01")
 
-# 1. verify if new set contains already used used images and
-#    if so, move them to another directory
-exclude_used(source_dir, used_dir)
-# 2. add borders to all images
-add_borders(source_dir, dest_dir)
-# 3. shrink images to standard size and resolution
-#    1169, 1764 for 96 dpi
-#     877, 1323 for 72 dpi 
-shrink_images(dest_dir, max_width_96, max_height_96)
-# verify pixel sizes
-pixel_sizes(dest_dir, max_width_96, max_height_96)
-# 4. correct label colors (solid red, white, yellow and black)
-#verify_label_colors(dest_dir)
-# 5. match instances to labels
+### 1. verify if new set contains already used used images and
+###    if so, move them to another directory
+##exclude_used(source_dir, used_dir)
+### 2. add borders to all images
+##add_borders(source_dir, dest_dir)
+### 3. shrink images to standard size and resolution
+###    1169, 1764 for 96 dpi
+###     877, 1323 for 72 dpi 
+##shrink_images(dest_dir, max_width_96, max_height_96)
+### verify pixel sizes
+##pixel_sizes(dest_dir, max_width_96, max_height_96)
+### 4. verify and correct label colors (solid red, white, yellow and black)
+##verify_label_colors(dest_dir)
+# 5.verify and match instances to labels
 # 5.1 correct the borders of the instances
-#verify_instance_borders(dest_dir)
-
-# 6. grow all instances (compensate border correction)
-
-# 7. recolor instances backgrounds (make them all light instead of black)
-# 8. 
+verify_instance_borders(dest_dir)
+##
+### 6. grow all instances (compensate border correction)
+##
+### 7. recolor instances backgrounds (make them all light instead of black)
+### 8. 
 ##print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 ##counter = 0
 ##for dest_filename in sorted(dest_dir.glob('*.png')):

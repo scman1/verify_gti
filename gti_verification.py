@@ -49,7 +49,7 @@ params_png.append(8)
 # required for preserving quality as much as possible after each transformation
 params_jpg = list()
 params_jpg.append(cv2.IMWRITE_JPEG_QUALITY)
-params_jpg.append(100)
+params_jpg.append(94)
 
 # standard pixel dimensions for 96 dpi
 max_width_96=1169
@@ -335,16 +335,6 @@ def correct_instance_backgrounds(filename_labels):
             coordinates = list(zip(indices[0], indices[1]))
             for i, j in coordinates:
                img2[i,j] = background 
-##        
-##        
-##        background = (0, 0, 0)
-##        for i in range(height):
-##            for j in range (width):
-##                color = img2[i,j]
-##                if (0 < color[0] and color[0] < 50) and \
-##                   (0 < color[1] and color[1] < 50) and \
-##                   (0 < color[2] and color[2] < 50):
-##                    img2[i,j] = background
         print("correcting:", filename_labels.name)
         cv2.imwrite(str(filename_labels),img2,params_png)
     else:

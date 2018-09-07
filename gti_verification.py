@@ -290,7 +290,6 @@ def verify_label_colors(dest_dir):
 def correct_instance_colors(filename_labels):
     img_instances = cv2.imread(str(filename_labels), cv2.IMREAD_COLOR)
     height,width,channels = img_instances.shape
-    
 
     colorlist=get_colour_count(img_instances)
     #print("initial colour count", len(colorlist))
@@ -311,6 +310,72 @@ def correct_instance_colors(filename_labels):
                 img2[i,j] = background
     cv2.imwrite(str(filename_labels),img2)
 
+#make all instance backgrounds solid black
+def correct_instance_backgrounds(filename_labels):
+    img_instances = cv2.imread(str(filename_labels), cv2.IMREAD_COLOR)
+    height,width,channels = img_instances.shape
+
+    colorlist=get_unique_colours(img_instances)
+    corrections = False
+    corrections_list = []
+    #first check if there are colours close to black in the image
+    for color in colorlist:
+        if color[0] < 50 and color[1] < 50 and color[2] < 50 and \
+           color != (0,0,0):
+            corrections_list.append(list(color))
+            corrections = True
+    # if there are colours close to black, get a list of corresponding pixels
+    # and correct them (make them black)
+    if corrections:
+        background = (0, 0, 0)
+        for color_match in corrections_list:
+            img2 = img_instances
+            # numpy where and all help in selecting only matching colour pixels
+            indices = numpy.where(numpy.all(img2 == color_match, axis=-1))
+            coordinates = list(zip(indices[0], indices[1]))
+            for i, j in coordinates:
+               img2[i,j] = background 
+##        
+##        
+##        background = (0, 0, 0)
+##        for i in range(height):
+##            for j in range (width):
+##                color = img2[i,j]
+##                if (0 < color[0] and color[0] < 50) and \
+##                   (0 < color[1] and color[1] < 50) and \
+##                   (0 < color[2] and color[2] < 50):
+##                    img2[i,j] = background
+        print("correcting:", filename_labels.name)
+        cv2.imwrite(str(filename_labels),img2,params_png)
+    else:
+        print(filename_labels.name, "OK")
+
+# make instance sizes equal to sizes of labels
+def compare_instances_to_labels(filename_labels):
+    img_instances = cv2.imread(str(filename_labels), cv2.IMREAD_COLOR)
+    img_labels = cv2.imread(str(filename_labels).replace("instances","labels"), cv2.IMREAD_COLOR)
+    
+    height,width,channels = img_instances.shape
+
+    colorlist=get_colour_count(img_instances)
+    #print("initial colour count", len(colorlist))
+    #print(colorlist)
+    bigcolors ={}
+    countuniques = 0
+    for color in colorlist:
+        if colorlist[color] < 500:
+            countuniques += 1
+        else:
+            bigcolors[color]=colorlist[color]
+    img2 = img_instances
+    background = (0, 0, 0)
+    for i in range(height):
+        for j in range (width):
+            color = img2[i,j]
+            if not (tuple(color) in bigcolors):
+                img2[i,j] = background
+    cv2.imwrite(str(filename_labels),img2)
+    
 def verify_instance_borders(dest_dir):
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
     #counter = 0
@@ -329,10 +394,28 @@ def verify_instance_borders(dest_dir):
     #        break
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
+def verify_instance_backgrounds(dest_dir):
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    #counter = 0
+    for dest_filename in sorted(dest_dir.glob('*instances.png')):
+        s_filename = str(dest_filename)
+        img = Image.open(str(s_filename))
+        #counter +=1
+        correct_instance_backgrounds(dest_filename)
+        #if counter > 1:
+        #    break
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+
+#get all pixel coordinates for a given colour
+def getobject(img,color):
+    indices = numpy.where(numpy.all(img == color, axis=-1))
+    pixels = list(zip(indices[0], indices[1]))
+    return pixels
+
 # Directory containing the new set of segmented images
 source_dir = Path(Path().absolute().parent, "herbariumsheets","sample02", "ignore")
 # Directory for processing and verifying the new set of segmented images
-dest_dir = Path(Path().absolute().parent, "herbariumsheets", "sample02b")
+dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample02", "sample02b")
 # Directory containing the already used set of segmented images
 used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets01")
 
@@ -343,60 +426,26 @@ used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumS
 ##add_borders(source_dir, dest_dir)
 ### 3. shrink images to standard size and resolution
 ###    1169, 1764 for 96 dpi
-###     877, 1323 for 72 dpi 
+###     877, 1323 for 72 dpi
+###dest_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets0272dpi")
 ##shrink_images(dest_dir, max_width_96, max_height_96)
 ### verify pixel sizes
 ##pixel_sizes(dest_dir, max_width_96, max_height_96)
 ### 4. verify and correct label colors (solid red, white, yellow and black)
 ##verify_label_colors(dest_dir)
 # 5.verify and match instances to labels
-# 5.1 correct the borders of the instances
-verify_instance_borders(dest_dir)
+# 5.1 correct the borders of the instances eliminating colours with small count
+#verify_instance_borders(dest_dir)
+# 5.2 make instance backgrounds black
+verify_instance_backgrounds(dest_dir)
+# 5.3 make object sizes in instance equal to sizes of labels 
+
 ##
 ### 6. grow all instances (compensate border correction)
 ##
 ### 7. recolor instances backgrounds (make them all light instead of black)
 ### 8. 
-##print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-##counter = 0
-##for dest_filename in sorted(dest_dir.glob('*.png')):
-##    s_filename = str(dest_filename)
-##    img = Image.open(str(s_filename))
-##    colours = get_unique_colours(img)
-##    print(dest_filename.name, len(colours))
-##    counter +=1
-##    if counter > 3:
-##        break
-##
-##
-##print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-##
-##counter = 0
-##for dest_filename in sorted(dest_dir.glob('*.png')):
-##    s_filename = str(dest_filename)
-##    img = Image.open(str(s_filename))
-##    colours = get_unique_colours_2(img)
-##    print(dest_filename.name, len(colours))
-##    counter +=1
-##    if counter > 3:
-##        break
-##
-##
-
-##counter = 0
-##for dest_filename in sorted(dest_dir.glob('*.png')):
-##    s_filename = str(dest_filename)
-##    img = Image.open(str(s_filename))
-##    colours = getcolorlist(img)
-##    print(dest_filename.name, len(colours))
-##    counter +=1
-##    if counter > 3:
-##        break
-##
-##print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-
-
-# 7. use relative positions of labels and corrected instances to create new
-#    labels that match instance sizes
+### 7. use relative positions of labels and corrected instances to create new
+###    labels that match instance sizes
 
 

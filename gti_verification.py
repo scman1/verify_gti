@@ -402,40 +402,65 @@ def getobject(img,color):
     pixels = list(zip(indices[0], indices[1]))
     return pixels
 
-# Directory containing the new set of segmented images
-source_dir = Path(Path().absolute().parent, "herbariumsheets","sample02", "ignore")
-# Directory for processing and verifying the new set of segmented images
-dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample02", "sample02b")
-# Directory containing the already used set of segmented images
-used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets01")
+#rename files:
+# *.jpeg and *.jpg as *.JPG
+# *_all.png as _instances.png
+# *_sel.png as _labels.png
+def rename_files(source_dir, dest_dir):
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for filepath in sorted(source_dir.glob('*')):
+        if filepath.is_file():
+            workfile = filepath.name
+            if ".jpg" in workfile:
+                workfile = workfile.replace(".jpg",".JPG")
+            elif ".jpeg" in workfile:
+                workfile = workfile.replace(".jpeg",".JPG")
+            elif "_all.png" in workfile:
+                workfile = workfile.replace("_all.png","_instances.png")
+            elif "_sel.png" in filepath.name:
+                workfile = workfile.replace("_sel.png","_labels.png")
+            workfile = workfile.replace(" ","_")
+            #print(workfile)
+            shutil.copy(str(filepath), Path(dest_dir, workfile))
 
-### 1. verify if new set contains already used used images and
+# Directory containing the new set of segmented images
+source_dir = Path(Path().absolute().parent, "herbariumsheets","sample03")
+# Directory for processing and verifying the new set of segmented images
+dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "processed")
+# Directory containing the already used set of segmented images (renamed and formated)
+used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets0296dpi")
+
+# 1. rename all files to match the pattern used by the learning script
+rename_files(source_dir, dest_dir)
+
+### 2. verify if new set contains already used used images and
 ###    if so, move them to another directory
+
 ##exclude_used(source_dir, used_dir)
-### 2. add borders to all images
+### 3. add borders to all images
 ##add_borders(source_dir, dest_dir)
-### 3. shrink images to standard size and resolution
+### 4. shrink images to standard size and resolution
 ###    1169, 1764 for 96 dpi
 ###     877, 1323 for 72 dpi
 ###dest_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets0272dpi")
 ##shrink_images(dest_dir, max_width_96, max_height_96)
 ### verify pixel sizes
 ##pixel_sizes(dest_dir, max_width_96, max_height_96)
-### 4. verify and correct label colors (solid red, white, yellow and black)
+### 5. verify and correct label colors (solid red, white, yellow and black)
 ##verify_label_colors(dest_dir)
-# 5.verify and match instances to labels
-# 5.1 correct the borders of the instances eliminating colours with small count
-#verify_instance_borders(dest_dir)
-# 5.2 make instance backgrounds black
-verify_instance_backgrounds(dest_dir)
-# 5.3 make object sizes in instance equal to sizes of labels 
+### 6.verify and match instances to labels
+### 6.1 correct the borders of the instances eliminating colours with small count
+###verify_instance_borders(dest_dir)
+### 6.2 make instance backgrounds black
+##verify_instance_backgrounds(dest_dir)
+### 6.3 make object sizes in instance equal to sizes of labels 
 
 ##
-### 6. grow all instances (compensate border correction)
+### 7. grow all instances (compensate border correction)
 ##
-### 7. recolor instances backgrounds (make them all light instead of black)
-### 8. 
-### 7. use relative positions of labels and corrected instances to create new
+### 8. recolor instances backgrounds (make them all light instead of black)
+###  
+### 9. use relative positions of labels and corrected instances to create new
 ###    labels that match instance sizes
 
 

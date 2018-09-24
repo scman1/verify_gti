@@ -426,17 +426,17 @@ def rename_files(source_dir, dest_dir):
 # Directory containing the new set of segmented images
 source_dir = Path(Path().absolute().parent, "herbariumsheets","sample03")
 # Directory for processing and verifying the new set of segmented images
-dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "processed")
+work_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "to_process")
 # Directory containing the already used set of segmented images (renamed and formated)
 used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets0296dpi")
 
 # 1. rename all files to match the pattern used by the learning script
-rename_files(source_dir, dest_dir)
+rename_files(source_dir, work_dir)
 
-### 2. verify if new set contains already used used images and
-###    if so, move them to another directory
+# 2. verify if new set contains already used used images and
+#    if so, move them to another directory
+exclude_used(work_dir, used_dir)
 
-##exclude_used(source_dir, used_dir)
 ### 3. add borders to all images
 ##add_borders(source_dir, dest_dir)
 ### 4. shrink images to standard size and resolution

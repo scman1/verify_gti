@@ -110,15 +110,37 @@ def standard_based_dpi(img_height, img_width):
     return 0
 
 def pixels_from_stds(img_height, img_width):
+    
     dpi_predicted=standard_based_dpi(img_height, img_width)
     
-
     img_width_inch = img_width / dpi_predicted
     img_height_inch = img_height / dpi_predicted
     #print(img_width_inch, img_height_inch)
-    
+    ppi_x = round(max_width * dpi_predicted)
+    ppi_y = round(max_height * dpi_predicted)
+        
     pix_add_x = int(round((max_width - img_width_inch) * dpi_predicted))
     pix_add_y = int(round((max_height - img_height_inch) * dpi_predicted))
+
+    # both width and height larger than standards
+    if pix_add_x < 0 and pix_add_y < 0:
+        if pix_add_x < pix_add_y:
+            pix_add_y = 0
+        elif pix_add_x > pix_add_y:
+            pix_add_x = 0
+    
+    #width greater than max_width, but length smaller, just add to height
+    if pix_add_x < 0 and pix_add_y >= 0: 
+        pix_add_y = int(round(img_width * ppi_y / ppi_x) - img_height)
+        pix_add_x = 0
+
+    #height greater than max_height, but width smaller, just add to width
+    if pix_add_y < 0 and pix_add_x >= 0:
+        ratio_y = img_height/ppi_y - 1
+        pix_add_x  = int(round((ppi_x * ratio_y + ppi_x) - img_width))
+        pix_add_y = 0
+        #print (ratio_y,ppi_x, ppi_y, round(ppi_x * ratio_y + ppi_x), img_height)
+
     return dpi_predicted,pix_add_x, pix_add_y
 
 def pixels_calculated(img_height, img_width):
@@ -180,7 +202,7 @@ def shrink_images(working_dir, width_to, height_to):
             
             # print source_filename.name, height,width,shrk_factor 
             # rezise image
-            res = cv2.resize(img,None,fx=shrk_factor, fy=shrk_factor, interpolation = cv2.INTER_CUBIC)
+            res = cv2.resize(img,None,fx=shrk_factor, fy=shrk_factor, interpolation = cv2.INTER_NEAREST)
             # crop image
             if "JPG" in filepath.name:
                 cv2.imwrite(str(Path(working_dir,filepath.name)),res,params_jpg)
@@ -188,7 +210,7 @@ def shrink_images(working_dir, width_to, height_to):
                 cv2.imwrite(str(Path(working_dir,filepath.name)),res,params_png)
 
 def pixel_sizes(directory, width_to, height_to ):
-    # add one pixel to all sides of poligons
+    # verify pixel dimensions
     for filename_ins in sorted(directory.glob('*.JPG')):
         s_filename = str(filename_ins)
         img = Image.open(str(s_filename))
@@ -275,15 +297,17 @@ def verify_label_colors(dest_dir):
     for dest_filename in sorted(dest_dir.glob('*labels.png')):
         s_filename = str(dest_filename)
         img = Image.open(str(s_filename))
-        colours = get_colour_count(img)
-    #    counter +=1
-        if len(colours)>4:
-            print(dest_filename.name, colours, len(colours), "needs correcting colours")
-            correct_label_colours(dest_filename)
+        colours = get_colour_count(img)        
+        colourlist=[*colours]
+        for color in colourlist:
+            if color not in [(255, 255, 0), (0, 0, 0), (255, 255, 255), (255, 0, 0)]:
+                incorrect_label_colour = 1
+                break
+        if len(colours)>4 or incorrect_label_colour == 1:
+            print(dest_filename.name, len(colours), "needs correcting colours",colourlist)
+            #correct_label_colours(dest_filename)
         else:
-            print(dest_filename.name, len(colours), "ok")
-    #    if counter > 90:
-    #        break
+            print(dest_filename.name, len(colours), "ok",colourlist)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 # change colours with counts smaller than 500 to the background colour
@@ -430,24 +454,26 @@ work_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "to_proc
 # Directory containing the already used set of segmented images (renamed and formated)
 used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets0296dpi")
 
-# 1. rename all files to match the pattern used by the learning script
-#rename_files(source_dir, work_dir)
-
-# 2. verify if new set contains already used used images and
-#    if so, move them to another directory
-#exclude_used(work_dir, used_dir)
-
+### 1. rename all files to match the pattern used by the learning script
+##rename_files(source_dir, work_dir)
+##
+### 2. verify if new set contains already used used images and
+###    if so, move them to another directory
+##exclude_used(work_dir, used_dir)
+##
 ### 3. add borders to all images
-##add_borders(source_dir, dest_dir)
-### 4. shrink images to standard size and resolution
-###    1169, 1764 for 96 dpi
-###     877, 1323 for 72 dpi
-###dest_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets0272dpi")
-##shrink_images(dest_dir, max_width_96, max_height_96)
-### verify pixel sizes
-##pixel_sizes(dest_dir, max_width_96, max_height_96)
+##borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "withborders")
+##add_borders(work_dir, borders_dir)
+# 4. shrink images to standard size and resolution
+#    1169, 1764 for 96 dpi
+#     877, 1323 for 72 dpi
+#dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "resized")
+#shrink_images(dest_dir, max_width_96, max_height_96)
+# verify pixel sizes
+#pixel_sizes(dest_dir, max_width_96, max_height_96)
 ### 5. verify and correct label colors (solid red, white, yellow and black)
-#verify_label_colors(work_dir)
+dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "colorcorrect2")
+verify_label_colors(dest_dir)
 ### 6.verify and match instances to labels
 ### 6.1 correct the borders of the instances eliminating colours with small count
 ###verify_instance_borders(dest_dir)

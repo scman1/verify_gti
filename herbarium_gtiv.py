@@ -304,10 +304,10 @@ def verify_label_colors(dest_dir):
                 incorrect_label_colour = 1
                 break
         if len(colours)>4 or incorrect_label_colour == 1:
-            print(dest_filename.name, len(colours), "needs correcting colours",colourlist)
+            print(dest_filename.name, len(colours), "needs correcting colours",sorted(colourlist))
             #correct_label_colours(dest_filename)
         else:
-            print(dest_filename.name, len(colours), "ok",colourlist)
+            print(dest_filename.name, len(colours), "ok",sorted(colourlist))
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 # change colours with counts smaller than 500 to the background colour

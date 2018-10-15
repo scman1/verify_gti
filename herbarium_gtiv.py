@@ -431,11 +431,11 @@ work_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "to_proc
 used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets0296dpi")
 
 # 1. rename all files to match the pattern used by the learning script
-rename_files(source_dir, work_dir)
+#rename_files(source_dir, work_dir)
 
 # 2. verify if new set contains already used used images and
 #    if so, move them to another directory
-exclude_used(work_dir, used_dir)
+#exclude_used(work_dir, used_dir)
 
 ### 3. add borders to all images
 ##add_borders(source_dir, dest_dir)
@@ -447,7 +447,7 @@ exclude_used(work_dir, used_dir)
 ### verify pixel sizes
 ##pixel_sizes(dest_dir, max_width_96, max_height_96)
 ### 5. verify and correct label colors (solid red, white, yellow and black)
-##verify_label_colors(dest_dir)
+#verify_label_colors(work_dir)
 ### 6.verify and match instances to labels
 ### 6.1 correct the borders of the instances eliminating colours with small count
 ###verify_instance_borders(dest_dir)

@@ -299,13 +299,14 @@ def verify_label_colors(dest_dir):
         img = Image.open(str(s_filename))
         colours = get_colour_count(img)        
         colourlist=[*colours]
+        incorrect_label_colour = 0
         for color in colourlist:
             if color not in [(255, 255, 0), (0, 0, 0), (255, 255, 255), (255, 0, 0)]:
                 incorrect_label_colour = 1
                 break
         if len(colours)>4 or incorrect_label_colour == 1:
             print(dest_filename.name, len(colours), "needs correcting colours",sorted(colourlist))
-            #correct_label_colours(dest_filename)
+            correct_label_colours(dest_filename)
         else:
             print(dest_filename.name, len(colours), "ok",sorted(colourlist))
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
@@ -443,14 +444,15 @@ def rename_files(source_dir, dest_dir):
                 workfile = workfile.replace("_all.png","_instances.png")
             elif "_sel.png" in filepath.name:
                 workfile = workfile.replace("_sel.png","_labels.png")
-            workfile = workfile.replace(" ","_")
+            workfile = workfile.replace(" ","_") #remove spaces from names
+            workfile = workfile.replace("__","_") #remove double underscores from names
             #print(workfile)
             shutil.copy(str(filepath), Path(dest_dir, workfile))
 
 # Directory containing the new set of segmented images
-source_dir = Path(Path().absolute().parent, "herbariumsheets","sample03")
+source_dir = Path(Path().absolute().parent, "herbariumsheets","sample04")
 # Directory for processing and verifying the new set of segmented images
-work_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "to_process")
+work_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "to_process")
 # Directory containing the already used set of segmented images (renamed and formated)
 used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets0296dpi")
 
@@ -462,17 +464,17 @@ used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumS
 ##exclude_used(work_dir, used_dir)
 ##
 ### 3. add borders to all images
-##borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "withborders")
+##borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "withborders")
 ##add_borders(work_dir, borders_dir)
 # 4. shrink images to standard size and resolution
 #    1169, 1764 for 96 dpi
 #     877, 1323 for 72 dpi
-#dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "resized")
-#shrink_images(dest_dir, max_width_96, max_height_96)
-# verify pixel sizes
-#pixel_sizes(dest_dir, max_width_96, max_height_96)
-### 5. verify and correct label colors (solid red, white, yellow and black)
-dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample03", "colorcorrect2")
+##dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "resized")
+##shrink_images(dest_dir, max_width_96, max_height_96)
+### verify pixel sizes
+##pixel_sizes(dest_dir, max_width_96, max_height_96)
+# 5. verify and correct label colors (solid red, white, yellow and black)
+dest_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "colorcorrect")
 verify_label_colors(dest_dir)
 ### 6.verify and match instances to labels
 ### 6.1 correct the borders of the instances eliminating colours with small count

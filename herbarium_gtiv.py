@@ -367,7 +367,7 @@ def correct_instance_backgrounds(filename_labels):
     corrections_list = []
     #first check if there are colours close to black in the image
     for colour in colourlist:
-        if coluor[0] < 50 and colour[1] < 50 and colour[2] < 50 and \
+        if colour[0] < 50 and colour[1] < 50 and colour[2] < 50 and \
            colour != (0,0,0):
             corrections_list.append(list(colour))
             corrections = True
@@ -403,7 +403,7 @@ def compare_instances_to_labels(filename_labels):
         if colourlist[colour] < 500:
             countuniques += 1
         else:
-            bigcolours[coluor]=colourlist[colour]
+            bigcolours[colour]=colourlist[colour]
     img2 = img_instances
     background = (0, 0, 0)
     for i in range(height):
@@ -443,9 +443,26 @@ def verify_instance_backgrounds(dest_dir):
         #    break
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
+def verify_background_match(dest_dir):
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    #counter = 0
+    for instance_file in sorted(dest_dir.glob('*instances.png')):
+        img_instance = Image.open(str(instance_file))
+        label_file = Path(dest_dir,instance_file.name.replace("instances","labels"))
+        img_labels = Image.open(str(label_file))
+        instance_bkg = getobject(img_instance,[0,0,0])
+        label_bkg = getobject(img_labels,[0,0,0])
+        if len(instance_bkg) != len(label_bkg):
+            print("Dif:",instance_file.name,"(",len(instance_bkg),")",\
+                  label_file.name,"(",len(label_bkg),")")
+        else:
+            print("OK:",instance_file.name,label_file.name,\
+                  "(",len(label_bkg),")")
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+
 #get all pixel coordinates for a given colour
 def getobject(img,colour):
-    indices = numpy.where(numpy.all(img == colour, axis=-1))
+    indices = numpy.where(numpy.all(numpy.array(img) == colour, axis=-1))
     pixels = list(zip(indices[0], indices[1]))
     return pixels
 
@@ -472,12 +489,12 @@ def rename_files(source_dir, dest_dir):
             shutil.copy(str(filepath), Path(dest_dir, workfile))
 
 # Directory containing the new set of segmented images
-source_dir = Path(Path().absolute().parent, "herbariumsheets","sample04")
+##source_dir = Path(Path().absolute().parent, "herbariumsheets","sample04")
 # Directory for processing and verifying the new set of segmented images
-work_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "to_process")
+##work_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "to_process")
 
 # 1. rename all files to match the pattern used by the learning script
-rename_files(source_dir, work_dir)
+##rename_files(source_dir, work_dir)
 
 ### 2. verify if new set contains already used used images and
 ###    if so, move them to another directory
@@ -486,24 +503,23 @@ rename_files(source_dir, work_dir)
 ##exclude_used(work_dir, used_dir)
 
 # 3. add borders to all images
-borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "withborders")
-add_borders(work_dir, borders_dir)
+##borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "withborders")
+##add_borders(work_dir, borders_dir)
 # 4. shrink images to standard size and resolution
 #    1169, 1764 for 96 dpi
 #     877, 1323 for 72 dpi
-resize_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "resized")
-shrink_images(borders_dir, resize_dir, max_width_96, max_height_96)
+##resize_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "resized")
+##shrink_images(borders_dir, resize_dir, max_width_96, max_height_96)
 # verify pixel sizes
-pixel_sizes(resize_dir, max_width_96, max_height_96)
+##pixel_sizes(resize_dir, max_width_96, max_height_96)
 # 5. verify and correct label colours (solid red, white, yellow and black)
 colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "colourcorrect")
-verify_label_colours(resize_dir, colour_dir)
-### 6.verify and match instances to labels
-### 6.1 correct the borders of the instances eliminating colours with small count
-###verify_instance_borders(dest_dir)
-### 6.2 make instance backgrounds black
-##verify_instance_backgrounds(dest_dir)
-### 6.3 make object sizes in instance equal to sizes of labels 
+##verify_label_colours(resize_dir, colour_dir)
+# 6.verify that instances and labels match 
+# 6.1 make instance backgrounds black
+verify_instance_backgrounds(colour_dir)
+# 6.2 verify that background areas of instances and labels match
+verify_background_match(colour_dir)
 
 ##
 ### 7. grow all instances (compensate border correction)

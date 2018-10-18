@@ -472,9 +472,9 @@ def rename_files(source_dir, dest_dir):
             shutil.copy(str(filepath), Path(dest_dir, workfile))
 
 # Directory containing the new set of segmented images
-source_dir = Path(Path().absolute().parent, "herbariumsheets","sample04s")
+source_dir = Path(Path().absolute().parent, "herbariumsheets","sample04")
 # Directory for processing and verifying the new set of segmented images
-work_dir = Path(Path().absolute().parent, "herbariumsheets","sample04s", "to_process")
+work_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "to_process")
 
 # 1. rename all files to match the pattern used by the learning script
 rename_files(source_dir, work_dir)
@@ -486,17 +486,17 @@ rename_files(source_dir, work_dir)
 ##exclude_used(work_dir, used_dir)
 
 # 3. add borders to all images
-borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample04s", "withborders")
+borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "withborders")
 add_borders(work_dir, borders_dir)
 # 4. shrink images to standard size and resolution
 #    1169, 1764 for 96 dpi
 #     877, 1323 for 72 dpi
-resize_dir = Path(Path().absolute().parent, "herbariumsheets","sample04s", "resized")
+resize_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "resized")
 shrink_images(borders_dir, resize_dir, max_width_96, max_height_96)
 # verify pixel sizes
 pixel_sizes(resize_dir, max_width_96, max_height_96)
 # 5. verify and correct label colours (solid red, white, yellow and black)
-colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample04s", "colourcorrect")
+colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "colourcorrect")
 verify_label_colours(resize_dir, colour_dir)
 ### 6.verify and match instances to labels
 ### 6.1 correct the borders of the instances eliminating colours with small count

@@ -1,16 +1,23 @@
 #
-# Ground thruth image files verfication preprocessing
+# Ground thruth image files verfication and preprocessing
 # A set of procedures for  verifying that the ground truth datasets
-# are suitable for training  NHM semantic segmentation network
+# are suitable for training NHM semantic segmentation network
 # 
-# Initial version 2018-05-29, for verifying microscope slides
-# Current version 2018-08-17, for veifying herbarium sheets
-# GitHub  version 2018-09-06, initial check in
+# Initial  version 2018-05-29, for verifying microscope slides
+# Extended version 2018-08-17, for verifying herbarium sheets
+# GitHub   version 2018-09-06, initial check in to github
 #
 # Author: Abraham Nieva de la Hidalga
 # Project: ICEDIG
 #
 # Language: Python 3.6.6
+#
+# To Do
+#
+# 1. why use PIL or CV2
+#    - PIL is faster for pixel by pixel verification
+#    - CV2 with numpy is faster if array operations are used
+#       using CV2 for pixel by pixel manipulation is really slow
 
 from PIL import Image
 from pathlib import Path
@@ -178,7 +185,7 @@ def add_borders(source_dir, dest_dir):
     img_dpis = {}
     for source_filename in sorted(source_dir.glob('*.JPG')):
         s_image = str(source_filename)
-        img = Image.open(s_image)
+        img = Image.open(s_image) # change to CV2
         img_width, img_height = img.size
         #try to aproximate from standard sizes 
         dpi_predicted, pix_add_x, pix_add_y = pixels_for_ratio(img_height, img_width)
@@ -231,7 +238,7 @@ def pixel_sizes(directory, width_to, height_to ):
     # verify pixel dimensions
     for filename_ins in sorted(directory.glob('*.JPG')):
         s_filename = str(filename_ins)
-        img = Image.open(str(s_filename))
+        img = Image.open(str(s_filename)) #change tp cv2
         width,height = img.size
         if height!=height_to or width != width_to:
             print("out of range", filename_ins.name, height, width)
@@ -239,7 +246,6 @@ def pixel_sizes(directory, width_to, height_to ):
 def get_unique_colours(img):
     aimg= numpy.asarray(img)
     return set( tuple(v) for m2d in aimg for v in m2d )
-
 
 def get_unique_colours_2(img):
     aimg= numpy.asarray(img)
@@ -262,7 +268,6 @@ def getcolourlist(img):
             else:
                 colourlist[colour]=1
     return colourlist
-
 
 def exclude_used(dest_dir, used_dir):
     list_full = []
@@ -318,7 +323,7 @@ def verify_label_colours(source_dir, dest_dir):
                                 
     for dest_filename in sorted(source_dir.glob('*labels.png')):
         s_filename = str(dest_filename)
-        img = Image.open(str(s_filename))
+        img = Image.open(str(s_filename)) # change to cv2
         colours = get_colour_count(img)        
         colourlist=[*colours]
         incorrect_label_colour = 0
@@ -418,7 +423,7 @@ def verify_instance_borders(dest_dir):
     #counter = 0
     for dest_filename in sorted(dest_dir.glob('*instances.png')):
         s_filename = str(dest_filename)
-        img = Image.open(str(s_filename))
+        img = Image.open(str(s_filename)) # change to CV2
         colours = get_colour_count(img)
     #    counter +=1
         if len(colours)>20:
@@ -436,35 +441,192 @@ def verify_instance_backgrounds(dest_dir):
     #counter = 0
     for dest_filename in sorted(dest_dir.glob('*instances.png')):
         s_filename = str(dest_filename)
-        img = Image.open(str(s_filename))
+        img = Image.open(str(s_filename)) # change to CV2
         #counter +=1
         correct_instance_backgrounds(dest_filename)
         #if counter > 1:
         #    break
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
-def verify_background_match(dest_dir):
+def verify_instance_labels_match(dest_dir):
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-    #counter = 0
     for instance_file in sorted(dest_dir.glob('*instances.png')):
-        img_instance = Image.open(str(instance_file))
+        img_instance = cv2.imread(str(instance_file), cv2.IMREAD_COLOR)
+        #img_instance = Image.open(str(instance_file)) # change to CV2**
         label_file = Path(dest_dir,instance_file.name.replace("instances","labels"))
-        img_labels = Image.open(str(label_file))
-        instance_bkg = getobject(img_instance,[0,0,0])
-        label_bkg = getobject(img_labels,[0,0,0])
-        if len(instance_bkg) != len(label_bkg):
-            print("Dif:",instance_file.name,"(",len(instance_bkg),")",\
-                  label_file.name,"(",len(label_bkg),")")
-        else:
-            print("OK:",instance_file.name,label_file.name,\
-                  "(",len(label_bkg),")")
+        img_labels = cv2.imread(str(label_file), cv2.IMREAD_COLOR)
+        #img_labels = Image.open(str(label_file)) # change to CV2
+        bkgs_ok, len_bkg_ins, len_bkg_lbl = instance_labels_match(img_instance,[0,0,0],img_labels,[0,0,0])
+        if not bkgs_ok:
+            print("Dif:", instance_file.name,"(",len_bkg_ins,")" , \
+                  label_file.name, "(", len_bkg_lbl, ")" )
+            #correct_instance_contours(instance_file,img_instance,img_labels)
+            create_labels_from_instances(instance_file,img_instance,img_labels)
+        elif bkgs_ok:
+            print("OK:in",instance_file.name, "(",len_bkg_ins,")" , \
+                  label_file.name, "(", len_bkg_lbl, ")" )
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
+def instance_labels_match(img_instance,ins_bkg,img_labels,lbl_bkg):
+    instance_bkg = getobject(img_instance,ins_bkg)
+    label_bkg = getobject(img_labels,lbl_bkg)
+    bkg_ok = False
+    if len(instance_bkg) != len(label_bkg):
+        bkg_ok = False
+    else:
+        bkg_ok = True
+    return bkg_ok, len(instance_bkg), len(label_bkg)
+    
 #get all pixel coordinates for a given colour
 def getobject(img,colour):
     indices = numpy.where(numpy.all(numpy.array(img) == colour, axis=-1))
     pixels = list(zip(indices[0], indices[1]))
     return pixels
+
+#get all contour pixels from a blob
+def getcontour(pixels):
+  contour=[]
+  pixels = set(pixels)
+  for pixel in pixels:
+    # if any of the eight adjacent pixels is not in the pixel set
+    # then the pixel sits in the shape border
+    if not (pixel[0]-1,pixel[1]-1) in pixels:
+      contour.append(pixel)    
+    elif not (pixel[0],pixel[1]-1) in pixels:
+      contour.append(pixel)
+    elif not (pixel[0]+1,pixel[1]-1) in pixels:
+      contour.append(pixel)
+    elif not (pixel[0]-1,pixel[1]) in pixels:
+      contour.append(pixel)
+    elif not (pixel[0]+1,pixel[1]) in pixels:
+      contour.append(pixel)
+    elif not (pixel[0]-1,pixel[1]+1) in pixels:
+      contour.append(pixel)
+    elif not (pixel[0],pixel[1]+1) in pixels:
+      contour.append(pixel)
+    elif not (pixel[0]+1,pixel[1]+1) in pixels:
+      contour.append(pixel)
+  return contour
+
+# correct using pil for fast pixel by pixel 
+def correct_instance_contours(instance_file,img_instance,img_labels):
+    width, height = img_instance.size
+    # get all shapes in the instances image
+    colours = get_unique_colours_2(img_instance)
+    colours = colours.tolist()
+    colours.remove([0,0,0])
+    bkgs_match = False
+    while not bkgs_match:
+        # for each shape
+        for shape_colour in colours:
+            shape_pixels = getobject(img_instance, shape_colour)
+        # get shape contour
+            shape_contour = getcontour(shape_pixels)
+        # use contour in labels image to verify if external adjacent are background
+        # if not background in labels, change to current shape colour in instances
+            for pixel in shape_contour:
+                adjacent_pixels = getadjacentpixels(pixel, height, width)
+                for adjpix in adjacent_pixels:
+                    x = int(adjpix[1]) # column
+                    y = int(adjpix[0]) # row
+                    colour_in_lbl = img_labels.getpixel((x,y))
+                    if not numpy.array_equal(colour_in_lbl, [0,0,0]):
+                        img_instance.putpixel((x,y),tuple(shape_colour))
+        # if backgronds match stop else repeat for all shapes
+        bkgs_match = instance_labels_match(img_instance,(0,0,0),img_labels,(0,0,0))     
+        # save new instances file
+        cv2.imwrite(str(instance_file),numpy.array(img_instance),params_png)
+
+# using CV2, use instances to generate labels
+def create_labels_from_instances(instance_file,img_instance,img_labels):
+    height,width,channels = img_instance.shape
+    # get all shapes in the instances image
+    colours = get_unique_colours_2(img_instance)
+    colours = colours.tolist()
+    colours.remove([0,0,0])
+    bkgs_match = False
+    # for each shape
+    for shape_colour in colours:
+        shape_pixels = getobject(img_instance, shape_colour)
+    # get shape contour
+        shape_contour = getcontour(shape_pixels)
+        # get contour centre coordinates
+        centre_pixel = getcontourcentre(shape_contour)
+        # get the colour for centre pixel from labels
+        x = int(centre_pixel[1]) # column
+        y = int(centre_pixel[0]) # row
+        colour_in_lbl = img_labels[y,x]
+        # if the colour in the centre is not black replace
+        # replace shape colour with centre colour
+        if not numpy.array_equal(colour_in_lbl, [0,0,0]):
+            img_instance[numpy.where((img_instance == shape_colour).all(axis = 2))] = colour_in_lbl
+    cv2.imwrite(str(instance_file).replace("instances","labels"),img_instance,params_png)
+    
+def getadjacentpixels(pixel, height, width):
+    # pixel coordinates are in the form: (row, column)
+    # min for both is 0
+    # max for row is height - 1
+    # max for column is width - 1
+    adjacent = []
+    if pixel[0]-1 >= 0:
+        adjacent.append((pixel[0]-1, pixel[1]))
+    if pixel[0]-1 >= 0 and pixel[1]+1 < width:
+        adjacent.append((pixel[0]-1,pixel[1]+1))
+    if pixel[0]-1 >=0 and pixel[1]-1 >= 0:
+        adjacent.append((pixel[0]-1,pixel[1]-1))
+    if pixel[1]-1 >= 0:
+        adjacent.append((pixel[0],pixel[1]-1))
+    if pixel[0]+1 < height and pixel[1]-1 >= 0:
+        adjacent.append((pixel[0]+1,pixel[1]-1))
+    if pixel[0]+1 < height:
+        adjacent.append((pixel[0]+1,pixel[1]))
+    if pixel[1]+1 < width:
+        adjacent.append((pixel[0],pixel[1]+1))
+    if pixel[0]+1 < height and pixel[1]+1 < width:
+        adjacent.append((pixel[0]+1,pixel[1]+1))
+    return adjacent
+
+def getcontourcentre(shape_contour):
+    min_x = min_y = max_x = max_y = 0
+    for pair in shape_contour:
+        if min_x==min_y==max_y==max_x==0:
+            min_y, min_x = pair
+            max_y, max_x = pair
+        else:
+            if pair[0] < min_y:
+                min_y = pair[0]
+            if pair[1] < min_x:
+                min_x = pair[1]
+            if pair[0] > max_y:
+                max_y = pair[0]
+            if pair[1] > max_x:
+                max_x = pair[1]
+    mid_y = int(round(min_y + (max_y-min_y)/2))
+    mid_x = int(round(min_x + (max_x-min_x)/2))
+    return (mid_y, mid_x)
+
+def correct_instance_colours(filename_labels):
+    img_instances = cv2.imread(str(filename_labels), cv2.IMREAD_COLOR)
+    height,width,channels = img_instances.shape
+
+    colourlist=get_colour_count(img_instances)
+    #print("initial colour count", len(colourlist))
+    #print(colourlist)
+    bigcolours ={}
+    countuniques = 0
+    for colour in colourlist:
+        if colourlist[colour] < 500:
+            countuniques += 1
+        else:
+            bigcolours[colour]=colourlist[colour]
+    img2 = img_instances
+    background = (0, 0, 0)
+    for i in range(height):
+        for j in range (width):
+            colour = img2[i,j]
+            if not (tuple(colour) in bigcolours):
+                img2[i,j] = background
+    cv2.imwrite(str(filename_labels),img2)    
 
 #rename files:
 # *.jpeg and *.jpg as *.JPG
@@ -496,9 +658,9 @@ def rename_files(source_dir, dest_dir):
 # 1. rename all files to match the pattern used by the learning script
 ##rename_files(source_dir, work_dir)
 
-### 2. verify if new set contains already used used images and
-###    if so, move them to another directory
-### Directory containing the already used set of segmented images (renamed and formated)
+# 2. verify if new set contains already used used images and
+#    if so, move them to another directory
+# Directory containing the already used set of segmented images (renamed and formated)
 ##used_dir = Path(Path().absolute().parent, "herbariumsheets", "TrainingHerbariumSheets0296dpi")
 ##exclude_used(work_dir, used_dir)
 
@@ -517,9 +679,10 @@ colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "colou
 ##verify_label_colours(resize_dir, colour_dir)
 # 6.verify that instances and labels match 
 # 6.1 make instance backgrounds black
-verify_instance_backgrounds(colour_dir)
+##verify_instance_backgrounds(colour_dir)
 # 6.2 verify that background areas of instances and labels match
-verify_background_match(colour_dir)
+#     correct instances if needed
+verify_instance_labels_match(colour_dir)
 
 ##
 ### 7. grow all instances (compensate border correction)

@@ -650,6 +650,17 @@ def rename_files(source_dir, dest_dir):
             #print(workfile)
             shutil.copy(str(filepath), Path(dest_dir, workfile))
 
+def rezise_png_images(source_dir):
+    for source_filename in source_dir.iterdir():
+        #read the image
+        if ".png" in source_filename.name:
+            img = cv2.imread(str(source_filename), cv2.IMREAD_COLOR)
+            params = list()
+            params.append(cv2.IMWRITE_PNG_COMPRESSION)
+            params.append(9)
+            cv2.imwrite(str(source_filename),img,params)
+
+
 # Directory containing the new set of segmented images
 ##source_dir = Path(Path().absolute().parent, "herbariumsheets","sample04")
 # Directory for processing and verifying the new set of segmented images
@@ -675,21 +686,26 @@ def rename_files(source_dir, dest_dir):
 # verify pixel sizes
 ##pixel_sizes(resize_dir, max_width_96, max_height_96)
 # 5. verify and correct label colours (solid red, white, yellow and black)
-colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "colourcorrect")
+##colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "colourcorrect")
 ##verify_label_colours(resize_dir, colour_dir)
 # 6.verify that instances and labels match 
 # 6.1 make instance backgrounds black
+#     corrected instance backgrounds that were not black
 ##verify_instance_backgrounds(colour_dir)
 # 6.2 verify that background areas of instances and labels match
-#     correct instances if needed
-verify_instance_labels_match(colour_dir)
-
-##
-### 7. grow all instances (compensate border correction)
-##
-### 8. recolour instances backgrounds (make them all light instead of black)
-###  
-### 9. use relative positions of labels and corrected instances to create new
-###    labels that match instance sizes
-
-
+#     correct instances or labels as needed
+#     instances were larger than labels so growing instances did not work
+#     used  positions of labels and instances to create new labels that match
+#     instance sizes
+##verify_instance_labels_match(colour_dir)
+# 7. after new labels created need to verify label colours again
+manualedit_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "manualedit")
+##verify_label_colours(colour_dir, manualedit_dir)
+# 8. after manual edit verify label colours, instance backgrounds,
+#    instance-labels match
+finished_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "finalpass")
+verify_label_colours(manualedit_dir, finished_dir)
+verify_instance_backgrounds(finished_dir)
+verify_instance_labels_match(finished_dir)
+# 9. rewrite all pngs, eliminate alpha channel if it was added on manual edit
+rezise_png_images(finished_dir)

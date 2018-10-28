@@ -236,13 +236,30 @@ def shrink_images(source_dir, dest_dir, width_to, height_to):
 
 def pixel_sizes(directory, width_to, height_to ):
     # verify pixel dimensions
-    for filename_ins in sorted(directory.glob('*.JPG')):
-        s_filename = str(filename_ins)
-        img = Image.open(str(s_filename)) #change tp cv2
+    for filepath in sorted(directory.glob('*')):
+        s_filepath = str(filepath)
+        img = Image.open(str(s_filepath)) #change to cv2
         width,height = img.size
         if height!=height_to or width != width_to:
-            print("out of range", filename_ins.name, height, width)
-
+            print("out of range", filepath.name, height, width)
+            #need to crop extra pixels
+            if width > width_to:
+                print("need to crop width")
+            elif height > height_to:
+                print("need to crop height")
+            crop_images(filepath, width_to, height_to)
+                
+def crop_images(filepath, width_to, height_to):
+    print("cropping to",width_to, height_to)
+    #read the image
+    img = cv2.imread(str(filepath), cv2.IMREAD_COLOR)
+    crop_img = img[0:height_to, 0:width_to]
+    if "JPG" in filepath.name:
+        cv2.imwrite(str(filepath),crop_img,params_jpg)
+    elif "png" in filepath.name:
+        cv2.imwrite(str(filepath),crop_img,params_png)
+    
+    
 def get_unique_colours(img):
     aimg= numpy.asarray(img)
     return set( tuple(v) for m2d in aimg for v in m2d )
@@ -660,14 +677,22 @@ def rezise_png_images(source_dir):
             params.append(9)
             cv2.imwrite(str(source_filename),img,params)
 
+def list_image_size(source_dir):
+    for source_filename in source_dir.iterdir():
+        #read the image
+        if ".png" in source_filename.name or ".JPG"  in source_filename.name:
+            img = cv2.imread(str(source_filename), cv2.IMREAD_COLOR)
+            height,width,channels = img.shape
+            print(source_filename.name,":",height,":",width,":",channels, ":")
 
 # Directory containing the new set of segmented images
-##source_dir = Path(Path().absolute().parent, "herbariumsheets","sample04")
+source_dir = Path(Path().absolute().parent, "herbariumsheets","sample05")
 # Directory for processing and verifying the new set of segmented images
-##work_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "to_process")
+work_dir = Path(Path().absolute().parent, "herbariumsheets","sample05", "to_process")
 
 # 1. rename all files to match the pattern used by the learning script
-##rename_files(source_dir, work_dir)
+print("rename files")
+rename_files(source_dir, work_dir)
 
 # 2. verify if new set contains already used used images and
 #    if so, move them to another directory
@@ -676,36 +701,45 @@ def rezise_png_images(source_dir):
 ##exclude_used(work_dir, used_dir)
 
 # 3. add borders to all images
-##borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "withborders")
-##add_borders(work_dir, borders_dir)
+print("Add Borders")
+borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample05", "withborders")
+add_borders(work_dir, borders_dir)
 # 4. shrink images to standard size and resolution
 #    1169, 1764 for 96 dpi
 #     877, 1323 for 72 dpi
-##resize_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "resized")
-##shrink_images(borders_dir, resize_dir, max_width_96, max_height_96)
+print("resize images")
+resize_dir = Path(Path().absolute().parent, "herbariumsheets","sample05", "resized")
+shrink_images(borders_dir, resize_dir, max_width_96, max_height_96)
 # verify pixel sizes
-##pixel_sizes(resize_dir, max_width_96, max_height_96)
+print("verify image dimensions")
+pixel_sizes(resize_dir, max_width_96, max_height_96) #
+list_image_size(resize_dir)
 # 5. verify and correct label colours (solid red, white, yellow and black)
-##colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "colourcorrect")
-##verify_label_colours(resize_dir, colour_dir)
-# 6.verify that instances and labels match 
+print("verify label colours")
+colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample05", "colourcorrect")
+verify_label_colours(resize_dir, colour_dir)
+# 6. verify that instances and labels match 
 # 6.1 make instance backgrounds black
 #     corrected instance backgrounds that were not black
-##verify_instance_backgrounds(colour_dir)
+print("verify instances backgrounds")
+verify_instance_backgrounds(colour_dir)
 # 6.2 verify that background areas of instances and labels match
 #     correct instances or labels as needed
 #     instances were larger than labels so growing instances did not work
 #     used  positions of labels and instances to create new labels that match
 #     instance sizes
-##verify_instance_labels_match(colour_dir)
+print("verify that instances and labels match")
+verify_instance_labels_match(colour_dir)
 # 7. after new labels created need to verify label colours again
-manualedit_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "manualedit")
-##verify_label_colours(colour_dir, manualedit_dir)
+manualedit_dir = Path(Path().absolute().parent, "herbariumsheets","sample05", "manualedit")
+verify_label_colours(colour_dir, manualedit_dir)
 # 8. after manual edit verify label colours, instance backgrounds,
 #    instance-labels match
-finished_dir = Path(Path().absolute().parent, "herbariumsheets","sample04", "finalpass")
+finished_dir = Path(Path().absolute().parent, "herbariumsheets","sample05", "finalpass")
 verify_label_colours(manualedit_dir, finished_dir)
 verify_instance_backgrounds(finished_dir)
 verify_instance_labels_match(finished_dir)
 # 9. rewrite all pngs, eliminate alpha channel if it was added on manual edit
 rezise_png_images(finished_dir)
+#10. check pixel dimensions
+list_image_size(finished_dir)

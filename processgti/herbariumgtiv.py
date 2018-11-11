@@ -1,23 +1,26 @@
 #
-# Ground thruth image files verfication and preprocessing
-# A set of procedures for  verifying that the ground truth datasets
-# are suitable for training NHM semantic segmentation network
+# Ground thruth image files preprocessing and postprocessing functions
+# A set of procedures for:
+#   a) verifying that ground truth datasets are suitable for training NHM
+#      semantic segmentation network (unique colours, instance sizes)
+#   b) pre-processing (add borders, resize)
+#   c) post-processing (extract segments from original files)
 # 
 # Initial  version 2018-05-29, for verifying microscope slides
 # Extended version 2018-08-17, for verifying herbarium sheets
 # GitHub   version 2018-09-06, initial check in to github
+# Rewrite  version 2018-10-10, split into library modules 
 #
 # Author: Abraham Nieva de la Hidalga
 # Project: ICEDIG
 #
 # Language: Python 3.6.6
 #
-# To Do
-#
-# 1. why use PIL or CV2
+# Why use PIL and CV2?
 #    - PIL is faster for pixel by pixel verification
 #    - CV2 with numpy is faster if array operations are used
 #       using CV2 for pixel by pixel manipulation is really slow
+#    - All procedures can be migrated to CV2 eventually
 
 from PIL import Image
 from pathlib import Path
@@ -622,6 +625,25 @@ def getcontourcentre(shape_contour):
     mid_x = int(round(min_x + (max_x-min_x)/2))
     return (mid_y, mid_x)
 
+def getcontourcorners(shape_contour):
+    min_x = min_y = max_x = max_y = 0
+    for pair in shape_contour:
+        if min_x==min_y==max_y==max_x==0:
+            min_y, min_x = pair
+            max_y, max_x = pair
+        else:
+            if pair[0] < min_y:
+                min_y = pair[0]
+            if pair[1] < min_x:
+                min_x = pair[1]
+            if pair[0] > max_y:
+                max_y = pair[0]
+            if pair[1] > max_x:
+                max_x = pair[1]
+    mid_y = int(round(min_y + (max_y-min_y)/2))
+    mid_x = int(round(min_x + (max_x-min_x)/2))
+    return ((min_y, min_x), (max_y, max_x))
+
 def correct_instance_colours(filename_labels):
     img_instances = cv2.imread(str(filename_labels), cv2.IMREAD_COLOR)
     height,width,channels = img_instances.shape
@@ -685,6 +707,71 @@ def list_image_size(source_dir):
             height,width,channels = img.shape
             print(source_filename.name,":",height,":",width,":",channels, ":")
 
+def get_original_filename(instance_file, source_dir):
+    workfile = instance_file.name.replace("_instances.png","")
+    workfile = workfile.replace("_","*")
+    instance_file = source_dir.glob("*"+workfile+"*.jpg")
+    return list(instance_file)[0]
+    
+# using CV2, use instances to generate labels
+def extract_segments(image_file,img_instance,img_labels):
+    height,width,channels = img_instance.shape
+    # get all shapes in the instances image
+    colours = get_unique_colours_2(img_instance)
+    colours = colours.tolist()
+    colours.remove([0,0,0])
+    lbls_i = 1
+    bcds_i = 1
+    colc_i = 1
+    bkgs_match = False
+    # for each shape
+    for shape_colour in colours:
+        shape_pixels = getobject(img_instance, shape_colour)
+    # get shape contour
+        shape_contour = getcontour(shape_pixels)
+        # get contour centre coordinates
+        centre_pixel = getcontourcentre(shape_contour)
+        # get the colour for centre pixel from labels
+        x = int(centre_pixel[1]) # column
+        y = int(centre_pixel[0]) # row
+        colour_in_lbl = img_labels[y,x]
+        #open the original file
+        full_image = cv2.imread(str(image_file))
+        #recalculate pixels added to width
+        img_height,img_width,_ = full_image.shape
+        _, pix_add_x, _ = pixels_for_ratio(img_height, img_width)
+        width_calc = img_width + pix_add_x
+        # get contour corners
+        corner_pixels = getcontourcorners(shape_contour)
+        # transform corner coordinates to resolution of the original image
+        x1 = int(corner_pixels[0][1]*width_calc/max_width_96) # column
+        y1 = int(corner_pixels[0][0]*width_calc/max_width_96) # row
+        x2 = int(corner_pixels[1][1]*width_calc/max_width_96) # column
+        y2 = int(corner_pixels[1][0]*width_calc/max_width_96) # row
+        #get the segment from the full image
+        segment = full_image[y1:y2, x1:x2]
+        suffix = "_"
+        # use colour in centre to get segment type
+        # if red save segment as label
+        if numpy.array_equal(colour_in_lbl, [0,0,255]):
+            suffix += "lbl"+'{:02d}'.format(lbls_i)
+            lbls_i+=1
+        # if yellow save segment as colour chart
+        elif numpy.array_equal(colour_in_lbl, [0,255,255]):
+            suffix += "clc"+'{:02d}'.format(colc_i)
+            colc_i+=1
+        # if white save segment as barcode
+        elif numpy.array_equal(colour_in_lbl, [255,255,255]):
+            suffix += "bcd"+'{:02d}'.format(bcds_i)
+            bcds_i+=1
+        cv2.imwrite(str(image_file).replace(".jpg",suffix+".jpg"),segment,params_jpg)
 
-
-
+def extract_segments_from_files(instances_dir, full_image_dir):
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    for instance_file in sorted(instances_dir.glob('*instances.png')):
+        img_instance = cv2.imread(str(instance_file), cv2.IMREAD_COLOR)
+        label_file = Path(instances_dir,instance_file.name.replace("instances","labels"))
+        img_labels = cv2.imread(str(label_file), cv2.IMREAD_COLOR)
+        image_file = get_original_filename(instance_file, full_image_dir)
+        extract_segments(image_file,img_instance,img_labels)
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))

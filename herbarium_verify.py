@@ -6,9 +6,9 @@ from pathlib import Path
 from  processgti.herbariumgtiv import *
 
 # Directory containing the new set of segmented images
-source_dir = Path(Path().absolute().parent, "herbariumsheets","sample05s")
+source_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b")
 # Directory for processing and verifying the new set of segmented images
-work_dir = Path(Path().absolute().parent, "herbariumsheets","sample05s", "to_process")
+work_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b", "to_process")
 # 1. rename all files to match the pattern used by the learning script
 print("rename files")
 rename_files(source_dir, work_dir)
@@ -21,13 +21,13 @@ rename_files(source_dir, work_dir)
 
 # 3. add borders to all images
 print("Add Borders")
-borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample05s", "withborders")
+borders_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b", "withborders")
 add_borders(work_dir, borders_dir)
 # 4. shrink images to standard size and resolution
 #    1169, 1764 for 96 dpi
 #     877, 1323 for 72 dpi
 print("resize images")
-resize_dir = Path(Path().absolute().parent, "herbariumsheets","sample05s", "resized")
+resize_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b", "resized")
 shrink_images(borders_dir, resize_dir, max_width_96, max_height_96)
 # verify pixel sizes
 print("verify image dimensions")
@@ -35,7 +35,7 @@ pixel_sizes(resize_dir, max_width_96, max_height_96) #
 list_image_size(resize_dir)
 # 5. verify and correct label colours (solid red, white, yellow and black)
 print("verify label colours")
-colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample05s", "colourcorrect")
+colour_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b", "colourcorrect")
 verify_label_colours(resize_dir, colour_dir)
 # 6. verify that instances and labels match 
 # 6.1 make instance backgrounds black
@@ -51,12 +51,12 @@ print("verify that instances and labels match")
 verify_instance_labels_match(colour_dir)
 # 7. after new labels created need to verify label colours again
 print("verify label colours")
-manualedit_dir = Path(Path().absolute().parent, "herbariumsheets","sample05s", "manualedit")
+manualedit_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b", "manualedit")
 verify_label_colours(colour_dir, manualedit_dir)
 # 8. after manual edit verify label colours, instance backgrounds,
 #    instance-labels match
 print("final verifications")
-finished_dir = Path(Path().absolute().parent, "herbariumsheets","sample05s", "finalpass")
+finished_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b", "finalpass")
 verify_label_colours(manualedit_dir, finished_dir)
 verify_instance_backgrounds(finished_dir)
 verify_instance_labels_match(finished_dir)

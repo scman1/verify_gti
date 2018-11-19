@@ -775,3 +775,27 @@ def extract_segments_from_files(instances_dir, full_image_dir):
         image_file = get_original_filename(instance_file, full_image_dir)
         extract_segments(image_file,img_instance,img_labels)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+
+# background colours: light blue, pink, light yellow
+bkg_colours = [[227,206,166],[153,154,251],[153,255,255]]
+
+def change_instance_bkg(source_dir, dest_dir):
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    for filepath in sorted(source_dir.glob('*')):
+        s_filename = str(filepath)
+        if "instances" in s_filename:
+            img_instance = cv2.imread(s_filename, cv2.IMREAD_COLOR)
+            colours = get_unique_colours_2(img_instance)
+            colours = colours.tolist()
+            #print(colours)
+            for bkg_c in bkg_colours:
+                #print (bkg_c)
+                if not(bkg_c in colours):
+                    img_instance[numpy.where((img_instance == [0,0,0]).all(axis = 2))] = bkg_c
+                    break
+            cv2.imwrite(str(Path(dest_dir,filepath.name)),img_instance)
+        else:
+            shutil.copy(s_filename, Path(dest_dir, filepath.name))
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    

@@ -710,7 +710,7 @@ def list_image_size(source_dir):
 def get_original_filename(instance_file, source_dir):
     workfile = instance_file.name.replace("_instances.png","")
     workfile = workfile.replace("_","*")
-    instance_file = source_dir.glob("*"+workfile+"*.jpg")
+    instance_file = source_dir.glob("*"+workfile+".*")
     return list(instance_file)[0]
     
 # using CV2, use instances to generate labels
@@ -719,7 +719,14 @@ def extract_segments(image_file,img_instance,img_labels):
     # get all shapes in the instances image
     colours = get_unique_colours_2(img_instance)
     colours = colours.tolist()
-    colours.remove([0,0,0])
+    if [0,0,0] in colours:
+        colours.remove([0,0,0])
+    else:
+        print("Background is not black")
+        # get it as  the colour at 0,0
+        the_background = list(img_instance[0,0])
+        print(the_background)
+        colours.remove(the_background)
     lbls_i = 1
     bcds_i = 1
     colc_i = 1

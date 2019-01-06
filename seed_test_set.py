@@ -26,7 +26,7 @@ def darken_image(img,source_filename, dest_dir):
     new_image = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
     cv2.imwrite(str(Path(dest_dir,source_filename.name)),new_image,params_jpg)
 
-# add noise
+# Add noise
 def noise_image(img,source_filename, dest_dir):
     m = (20,20,20) 
     s = (20,20,20)
@@ -41,6 +41,8 @@ def seed_test_set(source_dir, dest_dir):
     dest_dir.mkdir(parents=True, exist_ok=True)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
     modification = -1 #0 = blur, 1 = brighten, 2 = darken, 3 = noise
+    #1 get the names of 24 random source files
+    #2 for each file, do one of the modifications to seed the set 
     for filepath in sorted(source_dir.glob('*.jpg')):
         s_filename = str(filepath)
         img = cv2.imread(str(s_filename), cv2.IMREAD_COLOR)
@@ -58,7 +60,10 @@ def seed_test_set(source_dir, dest_dir):
             print("noise image, ", filepath.name)
             noise_image(img,filepath, dest_dir)
             modification = -1
-            
+    #3 copy the GT masks for the modified files to dest_dir
+    #4 get segments of modified files
+    #5 copy modifed segments and files to the seeded test directory.
+    #6 save log to verify if tests detect outliers
         
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 

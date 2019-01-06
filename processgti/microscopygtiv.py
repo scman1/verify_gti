@@ -724,19 +724,29 @@ def list_image_size(source_dir):
 def get_original_filename(instance_file, source_dir):
     workfile = instance_file.name.replace("_instances.png","")
     workfile = workfile.replace("_","*")
-    instance_file = source_dir.glob("*"+workfile+"*.jpg")
+    instance_file = source_dir.glob("*"+workfile+".*")
     return list(instance_file)[0]
     
 # using CV2, use instances to generate labels
 def extract_segments(image_file,img_instance,img_labels):
+    print("processing", image_file)
     height,width,channels = img_instance.shape
     # get all shapes in the instances image
     colours = get_unique_colours_2(img_instance)
     colours = colours.tolist()
-    colours.remove([0,0,0])
+    #colours.remove([0,0,0])
+    if [0,0,0] in colours:
+        colours.remove([0,0,0])
+    else:
+        print("Background is not black")
+        # get it as  the colour at 0,0
+        the_background = list(img_instance[0,0])
+        print(the_background)
+        colours.remove(the_background)
     lbls_i = 1
     bcds_i = 1
     colc_i = 1
+    tpls_i = 1
     bkgs_match = False
     # for each shape
     for shape_colour in colours:
@@ -758,21 +768,26 @@ def extract_segments(image_file,img_instance,img_labels):
         # get contour corners
         corner_pixels = getcontourcorners(shape_contour)
         # transform corner coordinates to resolution of the original image
-        x1 = int(corner_pixels[0][1]*width_calc/max_width_96) # column
-        y1 = int(corner_pixels[0][0]*width_calc/max_width_96) # row
-        x2 = int(corner_pixels[1][1]*width_calc/max_width_96) # column
-        y2 = int(corner_pixels[1][0]*width_calc/max_width_96) # row
+        #for initial test no transformation is needed
+        x1 = int(corner_pixels[0][1]*img_width/800) # column
+        y1 = int(corner_pixels[0][0]*img_width/800) # row
+        x2 = int(corner_pixels[1][1]*img_width/800) # column
+        y2 = int(corner_pixels[1][0]*img_width/800) # row
         #get the segment from the full image
         segment = full_image[y1:y2, x1:x2]
         suffix = "_"
         # use colour in centre to get segment type
+        # if blue save segment as type label
+        if numpy.array_equal(colour_in_lbl, [255,0,0]):
+            suffix += "tpl"+'{:02d}'.format(tpls_i)
+            tpls_i+=1
         # if red save segment as label
-        if numpy.array_equal(colour_in_lbl, [0,0,255]):
+        elif numpy.array_equal(colour_in_lbl, [0,0,255]):
             suffix += "lbl"+'{:02d}'.format(lbls_i)
             lbls_i+=1
-        # if yellow save segment as colour chart
+        # if yellow save segment as specimen
         elif numpy.array_equal(colour_in_lbl, [0,255,255]):
-            suffix += "clc"+'{:02d}'.format(colc_i)
+            suffix += "spc"+'{:02d}'.format(colc_i)
             colc_i+=1
         # if white save segment as barcode
         elif numpy.array_equal(colour_in_lbl, [255,255,255]):

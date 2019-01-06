@@ -4,7 +4,38 @@
 
 from pathlib import Path
 from  processgti.herbariumgtiv import *
-from matplotlib import pyplot as plt
+
+# Blur image by applying Median Blur function
+def blur_image(img,source_filename, dest_dir):
+    median = cv2.medianBlur(img,5)
+    cv2.imwrite(str(Path(dest_dir,source_filename.name)),median,params_jpg)
+
+# Brighten image
+def brighten_image(img,source_filename, dest_dir):
+    new_image = numpy.zeros(img.shape, img.dtype)
+    alpha = 1.0 # Simple contrast control
+    beta = 50    # Simple brightness control
+    new_image = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
+    cv2.imwrite(str(Path(dest_dir,source_filename.name)),new_image,params_jpg)
+
+# Darken image
+def darken_image(img,source_filename, dest_dir):
+    new_image = numpy.zeros(img.shape, img.dtype)
+    alpha = 1.0 # Simple contrast control
+    beta = -50    # Simple brightness control
+    new_image = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
+    cv2.imwrite(str(Path(dest_dir,source_filename.name)),new_image,params_jpg)
+
+# add noise
+def noise_image(img,source_filename, dest_dir):
+    m = (20,20,20) 
+    s = (20,20,20)
+    noise = numpy.zeros(img.shape, img.dtype)
+    buff = img.copy()
+    cv2.randn(noise,m,s)
+    buff=cv2.add(buff, noise, dtype=cv2.CV_8UC3) 
+    cv2.imwrite(str(Path(dest_dir,source_filename.name)),buff,params_jpg)
+
 
 def seed_test_set(source_dir, dest_dir):
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -12,15 +43,20 @@ def seed_test_set(source_dir, dest_dir):
     modification = -1 #0 = blur, 1 = brighten, 2 = darken, 3 = noise
     for filepath in sorted(source_dir.glob('*.jpg')):
         s_filename = str(filepath)
+        img = cv2.imread(str(s_filename), cv2.IMREAD_COLOR)
         modification += 1
         if modification == 0:
             print("blur image, ", filepath.name)
+            blur_image(img,filepath, dest_dir)
         elif modification == 1:
             print("brighten image, ", filepath.name)
+            brighten_image(img,filepath, dest_dir)
         elif modification == 2:
             print("darken image, ",  filepath.name)
+            darken_image(img,filepath, dest_dir)
         elif modification == 3:
             print("noise image, ", filepath.name)
+            noise_image(img,filepath, dest_dir)
             modification = -1
             
         
@@ -32,89 +68,4 @@ source_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b","origi
 finished_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b", "modified")
 
 seed_test_set(source_dir, finished_dir)
-##for i in range(3):
-##    print(i)
-##    
-##sample_file = Path(source_dir, "B 10 0003200.jpg")
-##
-### Smooth (blur) image by applying an averaging filter
-##img = cv2.imread(str(sample_file))
-##kernel = numpy.ones((5,5),numpy.float32)/25
-##dst = cv2.filter2D(img,-1,kernel)
-##
-##plt.subplot(121),plt.imshow(img),plt.title('Original')
-##plt.xticks([]), plt.yticks([])
-##plt.subplot(122),plt.imshow(dst),plt.title('Averaging')
-##plt.xticks([]), plt.yticks([])
-##plt.show()
-##
-### Blur: the same efect as above is achieved with the blur function
-##blur = cv2.blur(img,(5,5))
-## 
-##plt.subplot(121),plt.imshow(img),plt.title('Original')
-##plt.xticks([]), plt.yticks([])
-##plt.subplot(122),plt.imshow(blur),plt.title('Blurred')
-##plt.xticks([]), plt.yticks([])
-##plt.show()
-##
-### Gausian Blur: alternative to box kernel, effective for removing gaussian noise
-##blur = cv2.GaussianBlur(img,(5,5),0)
-##
-##plt.subplot(121),plt.imshow(img),plt.title('Original')
-##plt.xticks([]), plt.yticks([])
-##plt.subplot(122),plt.imshow(blur),plt.title('Gaussian Blur')
-##plt.xticks([]), plt.yticks([])
-##plt.show()
-##
-### Median Blur: alternative to box kernel and gaussian, effective for reducing noise
-##median = cv2.medianBlur(img,5)
-##
-##plt.subplot(121),plt.imshow(img),plt.title('Original')
-##plt.xticks([]), plt.yticks([])
-##plt.subplot(122),plt.imshow(median),plt.title('Median Blur')
-##plt.xticks([]), plt.yticks([])
-##plt.show()
-##
-### Change contrast and brightnedd of an image
-### make image brighter
-##new_image = numpy.zeros(img.shape, img.dtype)
-##
-##alpha = 1.0 # Simple contrast control
-##beta = 50    # Simple brightness control
-##
-##new_image = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
-##
-##plt.subplot(121),plt.imshow(img),plt.title('Original')
-##plt.xticks([]), plt.yticks([])
-##plt.subplot(122),plt.imshow(new_image),plt.title('Brighter')
-##plt.xticks([]), plt.yticks([])
-##plt.show()
-##
-##
-### make image darker
-##new_image = numpy.zeros(img.shape, img.dtype)
-##
-##alpha = 1.0 # Simple contrast control
-##beta = -50    # Simple brightness control
-##
-##new_image = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
-##
-##plt.subplot(121),plt.imshow(img),plt.title('Original')
-##plt.xticks([]), plt.yticks([])
-##plt.subplot(122),plt.imshow(new_image),plt.title('Darker')
-##plt.xticks([]), plt.yticks([])
-##plt.show()
-##
-### add noise
-##m = (20,20,20) 
-##s = (20,20,20)
-##noise = numpy.zeros(img.shape, img.dtype)
-##buff = img.copy()
-##cv2.randn(noise,m,s)
-##buff=cv2.add(buff, noise, dtype=cv2.CV_8UC3) 
-##
-##plt.subplot(121),plt.imshow(img),plt.title('Original')
-##plt.xticks([]), plt.yticks([])
-##plt.subplot(122),plt.imshow(buff),plt.title('noisy')
-##plt.xticks([]), plt.yticks([])
-##plt.show()
+

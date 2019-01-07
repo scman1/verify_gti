@@ -1,8 +1,15 @@
 #
-# Preprocessing and verification before training
-#
+# Seed the segmented image set with modified images
+# blurred, bright, dark and noise
+# For testing detection using matlab functions
+# split the set 150 - 100
+# copy 150 to one directory, including its segments and GTs
+# copy 100 to another directory, including its segments and GTs
+# from the 100 get 24 random and modify them for testing detection#
 
 from pathlib import Path
+from shutil import copyfile
+import random
 from  processgti.herbariumgtiv import *
 
 # Blur image by applying Median Blur function
@@ -40,10 +47,10 @@ def noise_image(img,source_filename, dest_dir):
 def seed_test_set(source_dir, dest_dir):
     dest_dir.mkdir(parents=True, exist_ok=True)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-    modification = -1 #0 = blur, 1 = brighten, 2 = darken, 3 = noise
+    modification = -1 #0 = blur, 1 = brighten, 2 = darken, 3 = noise    
     #1 get the names of 24 random source files
     #2 for each file, do one of the modifications to seed the set 
-    for filepath in sorted(source_dir.glob('*.jpg')):
+    for filepath in sorted(source_dir.glob('*.JPG')):
         s_filename = str(filepath)
         img = cv2.imread(str(s_filename), cv2.IMREAD_COLOR)
         modification += 1
@@ -67,10 +74,61 @@ def seed_test_set(source_dir, dest_dir):
         
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
-# Directory containing the original set of segmented images
-source_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b","originals")
-# Directory containing the segments (rezised to 96DPI)
-finished_dir = Path(Path().absolute().parent, "herbariumsheets","sample05b", "modified")
+def random_select_and_copy(howmany, copy_from, copy_to):
+    copy_to.mkdir(parents=True, exist_ok=True)
+    list_full = []
+    rand_smpl = []
+    for filename in copy_from.iterdir():
+        nameonly = filename.name
+        if ".JPG" in nameonly:
+            list_full.append(nameonly)#[:-4])
+            
+    rand_smpl = [ list_full[i] for i in sorted(random.sample(range(len(list_full)), howmany)) ]
+    
+    for cpy_file in rand_smpl:
+        f_from = Path(copy_from,cpy_file)
+        f_to = Path(copy_to,cpy_file)
+        if f_from.is_file():
+            copyfile(str(f_from), str(f_to))
+            copyfile(str(f_from).replace(".JPG","_labels.png"),
+                 str(f_to).replace(".JPG","_labels.png"))
+            copyfile(str(f_from).replace(".JPG","_instances.png"),
+                 str(f_to).replace(".JPG","_instances.png"))
+    print(rand_smpl)
 
-seed_test_set(source_dir, finished_dir)
+def copy_not_used(origin_dir, used_dir, not_used_dir):
+    not_used_dir.mkdir(parents=True, exist_ok=True)
+    list_used = []
+    list_not_used = []
+    for filename in used_dir.iterdir():
+        nameonly = filename.name
+        if ".JPG" in nameonly:
+            list_used.append(nameonly)
+    for filename in origin_dir.iterdir():
+        nameonly = filename.name
+        if not (nameonly in list_used) and ".JPG" in nameonly:
+            list_not_used.append(nameonly)
+    for cpy_file in list_not_used:
+        f_from = Path(origin_dir,cpy_file)
+        f_to = Path(not_used_dir,cpy_file)
+        if f_from.is_file():
+            copyfile(str(f_from), str(f_to))
+            copyfile(str(f_from).replace(".JPG","_labels.png"),
+                 str(f_to).replace(".JPG","_labels.png"))
+            copyfile(str(f_from).replace(".JPG","_instances.png"),
+                 str(f_to).replace(".JPG","_instances.png"))
+            
+# Directory containing the original set of images and ground truths
+originals_dir = Path(Path().absolute().parent, "herbariumsheets","sample05","to_process")
+# Directory to copy the 150 subset of images and ground truths
+first_subset = Path(Path().absolute().parent, "herbariumsheets","sample05","subset150")
+# Directory to copy the 100 subset of images and ground truths
+second_subset = Path(Path().absolute().parent, "herbariumsheets","sample05","subset100")
+# Directory to copy the 24 subset of images and ground truths (from the 100)
+modify_subset = Path(Path().absolute().parent, "herbariumsheets","sample05","subset24")
+
+random_select_and_copy(100, originals_dir, second_subset)
+copy_not_used(originals_dir, second_subset, first_subset)
+random_select_and_copy(24, second_subset, modify_subset)
+seed_test_set(modify_subset, modify_subset)
 

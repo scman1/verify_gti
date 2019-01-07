@@ -127,8 +127,9 @@ second_subset = Path(Path().absolute().parent, "herbariumsheets","sample05","sub
 # Directory to copy the 24 subset of images and ground truths (from the 100)
 modify_subset = Path(Path().absolute().parent, "herbariumsheets","sample05","subset24")
 
-random_select_and_copy(100, originals_dir, second_subset)
-copy_not_used(originals_dir, second_subset, first_subset)
-random_select_and_copy(24, second_subset, modify_subset)
-seed_test_set(modify_subset, modify_subset)
+#random_select_and_copy(100, originals_dir, second_subset)
+#copy_not_used(originals_dir, second_subset, first_subset)
+#random_select_and_copy(24, second_subset, modify_subset)
+#seed_test_set(modify_subset, modify_subset)
 
+extract_segments_from_gt(modify_subset)

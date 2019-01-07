@@ -8,7 +8,8 @@
 # from the 100 get 24 random and modify them for testing detection#
 
 from pathlib import Path
-from shutil import copyfile
+from shutil import copyfile, copy
+import glob
 import random
 from  processgti.herbariumgtiv import *
 
@@ -117,9 +118,29 @@ def copy_not_used(origin_dir, used_dir, not_used_dir):
                  str(f_to).replace(".JPG","_labels.png"))
             copyfile(str(f_from).replace(".JPG","_instances.png"),
                  str(f_to).replace(".JPG","_instances.png"))
+
+def get_subset_segments(subset_dir, segment_dir):
+    subset_segment = Path(subset_dir,"segments")
+    subset_segment.mkdir(parents=True, exist_ok=True)
+    list_originals = []
+    for filename in subset_dir.iterdir():
+        nameonly = filename.name
+        if ".JPG" in nameonly:
+            list_originals.append(nameonly.replace(".JPG","*"))
+
+    for cpy_file in list_originals:
+        f_from = Path(segment_dir,cpy_file)
+        f_to = Path(subset_segment,cpy_file)
+        for file in glob.glob(str(f_from)):
+            print(file)
+            shutil.copy(file, str(subset_segment))
+            
             
 # Directory containing the original set of images and ground truths
 originals_dir = Path(Path().absolute().parent, "herbariumsheets","sample05","to_process")
+# Directory containing the segments from images and ground truths
+segments_dir = Path(Path().absolute().parent, "herbariumsheets","sample05","segments01")
+
 # Directory to copy the 150 subset of images and ground truths
 first_subset = Path(Path().absolute().parent, "herbariumsheets","sample05","subset150")
 # Directory to copy the 100 subset of images and ground truths
@@ -127,9 +148,11 @@ second_subset = Path(Path().absolute().parent, "herbariumsheets","sample05","sub
 # Directory to copy the 24 subset of images and ground truths (from the 100)
 modify_subset = Path(Path().absolute().parent, "herbariumsheets","sample05","subset24")
 
+
 #random_select_and_copy(100, originals_dir, second_subset)
 #copy_not_used(originals_dir, second_subset, first_subset)
 #random_select_and_copy(24, second_subset, modify_subset)
 #seed_test_set(modify_subset, modify_subset)
-
-extract_segments_from_gt(modify_subset)
+#extract_segments_from_gt(modify_subset)
+#get_subset_segments(first_subset, segments_dir) #does not work well misses originals with spaces
+#get_subset_segments(second_subset, segments_dir) #does not work well misses originals with spaces

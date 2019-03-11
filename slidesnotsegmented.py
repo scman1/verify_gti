@@ -6,9 +6,9 @@ from pathlib import Path
 from  processgti.microscopygtiv import *
 
 # Directory containing the new set of segmented images
-source_dir = Path(Path().absolute().parent, "microscopeslides","kew")
+source_dir = Path(Path().absolute().parent, "microscopeslides","kew","originals200")
 # Directory for processing and verifying the new set of segmented images
-work_dir = Path(Path().absolute().parent, "microscopeslides","kew", "rotated")
+work_dir = Path(source_dir, "rotated")
 # 1. rotate files and save as JPG
 print("Rotate Files")
 rotate_files(source_dir, work_dir)

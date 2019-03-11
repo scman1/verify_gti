@@ -710,16 +710,23 @@ def list_image_size(source_dir):
 def get_original_filename(instance_file, source_dir):
     workfile = instance_file.name.replace("_instances.png","")
     workfile = workfile.replace("_","*")
-    instance_file = source_dir.glob("*"+workfile+"*.jpg")
+    instance_file = source_dir.glob("*"+workfile+".*")
     return list(instance_file)[0]
     
 # using CV2, use instances to generate labels
-def extract_segments(image_file,img_instance,img_labels):
+def extract_segments(image_file,img_instance,img_labels,size):
     height,width,channels = img_instance.shape
     # get all shapes in the instances image
     colours = get_unique_colours_2(img_instance)
     colours = colours.tolist()
-    colours.remove([0,0,0])
+    if [0,0,0] in colours:
+        colours.remove([0,0,0])
+    else:
+        print("Background is not black")
+        # get it as  the colour at 0,0
+        the_background = list(img_instance[0,0])
+        print(the_background)
+        colours.remove(the_background)
     lbls_i = 1
     bcds_i = 1
     colc_i = 1
@@ -744,10 +751,17 @@ def extract_segments(image_file,img_instance,img_labels):
         # get contour corners
         corner_pixels = getcontourcorners(shape_contour)
         # transform corner coordinates to resolution of the original image
-        x1 = int(corner_pixels[0][1]*width_calc/max_width_96) # column
-        y1 = int(corner_pixels[0][0]*width_calc/max_width_96) # row
-        x2 = int(corner_pixels[1][1]*width_calc/max_width_96) # column
-        y2 = int(corner_pixels[1][0]*width_calc/max_width_96) # row
+        if size == 96:
+            x1 = int(corner_pixels[0][1]*width_calc/max_width_96) # column
+            y1 = int(corner_pixels[0][0]*width_calc/max_width_96) # row
+            x2 = int(corner_pixels[1][1]*width_calc/max_width_96) # column
+            y2 = int(corner_pixels[1][0]*width_calc/max_width_96) # row
+        elif size == 0: # no need to transform coordinates
+            x1 = int(corner_pixels[0][1]) # column
+            y1 = int(corner_pixels[0][0]) # row
+            x2 = int(corner_pixels[1][1]) # column
+            y2 = int(corner_pixels[1][0]) # row
+        
         #get the segment from the full image
         segment = full_image[y1:y2, x1:x2]
         suffix = "_"
@@ -764,7 +778,7 @@ def extract_segments(image_file,img_instance,img_labels):
         elif numpy.array_equal(colour_in_lbl, [255,255,255]):
             suffix += "bcd"+'{:02d}'.format(bcds_i)
             bcds_i+=1
-        cv2.imwrite(str(image_file).replace(".jpg",suffix+".jpg"),segment,params_jpg)
+        cv2.imwrite(str(image_file).replace(".JPG",suffix+".jpg"),segment,params_jpg)
 
 def extract_segments_from_files(instances_dir, full_image_dir):
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
@@ -773,9 +787,19 @@ def extract_segments_from_files(instances_dir, full_image_dir):
         label_file = Path(instances_dir,instance_file.name.replace("instances","labels"))
         img_labels = cv2.imread(str(label_file), cv2.IMREAD_COLOR)
         image_file = get_original_filename(instance_file, full_image_dir)
-        extract_segments(image_file,img_instance,img_labels)
+        extract_segments(image_file,img_instance,img_labels,96)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-
+    
+def extract_segments_from_gt(images_dir):
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    for instance_file in sorted(images_dir.glob('*instances.png')):
+        img_instance = cv2.imread(str(instance_file), cv2.IMREAD_COLOR)
+        label_file = Path(images_dir,instance_file.name.replace("instances","labels"))
+        img_labels = cv2.imread(str(label_file), cv2.IMREAD_COLOR)
+        image_file = Path(images_dir,instance_file.name.replace("_instances.png",".JPG"))
+        print(instance_file,"\n",label_file,"\n",image_file)
+        extract_segments(image_file,img_instance,img_labels,0)
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 # background colours: light blue, pink, light yellow
 bkg_colours = [[227,206,166],[153,154,251],[153,255,255]]
 

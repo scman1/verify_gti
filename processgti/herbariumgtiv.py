@@ -215,6 +215,36 @@ def add_borders(source_dir, dest_dir):
             cv2.imwrite(str(Path(dest_dir,source_filename.name.replace(".JPG","_labels.png"))),resized_labels,params_png)
     print(img_dpis)
 
+# add borers to all images in source directory and save them to dest directory
+#*******************************************************************************
+# corrected to address differences in sizes between labels and instances
+# dimensions
+#*******************************************************************************
+def add_borders2(source_dir, dest_dir):
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    i=1
+    img_dpis = {}
+    for source_filename in sorted(source_dir.glob('*')):
+        s_image = str(source_filename)
+        img = Image.open(s_image) # change to CV2
+        img_width, img_height = img.size
+        #try to aproximate from standard sizes 
+        dpi_predicted, pix_add_x, pix_add_y = pixels_for_ratio(img_height, img_width)
+        
+        print (i, source_filename.name,img_width, img_height, dpi_predicted, pix_add_x, pix_add_y)
+        img_dpis[source_filename.name] = (i, source_filename.name,img_width, img_height, dpi_predicted, pix_add_x, pix_add_y)
+        i=i+1
+
+        # add pixels to original image as black border
+        img1 = cv2.imread(s_image)
+        resized_img= cv2.copyMakeBorder(img1,0,pix_add_y,0,pix_add_x,cv2.BORDER_CONSTANT,value=0)
+        if ("JPG" in source_filename.name):
+          cv2.imwrite(str(Path(dest_dir,source_filename.name)), resized_img, params_jpg)
+        elif ("png" in source_filename.name):
+          cv2.imwrite(str(Path(dest_dir,source_filename.name)), resized_img, params_png)
+    print(img_dpis)
+
+
 # shrink images to the specified dpi width and height
 def shrink_images(source_dir, dest_dir, width_to, height_to):
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -341,17 +371,17 @@ def verify_label_colours(source_dir, dest_dir):
     for filepath in sorted(source_dir.glob('*')):
          shutil.copy(str(filepath), Path(dest_dir, filepath.name))
                                 
-    for dest_filename in sorted(source_dir.glob('*labels.png')):
+    for dest_filename in sorted(dest_dir.glob('*labels.png')):
         s_filename = str(dest_filename)
         img = Image.open(str(s_filename)) # change to cv2
         colours = get_colour_count(img)        
         colourlist=[*colours]
         incorrect_label_colour = 0
         for colour in colourlist:
-            if colour not in [(255, 255, 0), (0, 0, 0), (255, 255, 255), (255, 0, 0)]:
+            if colour not in [(255, 255, 0), (0, 0, 0), (255, 255, 255), (255, 0, 0), (0, 0, 255)]:
                 incorrect_label_colour = 1
                 break
-        if len(colours)>4 or incorrect_label_colour == 1:
+        if len(colours)>5 or incorrect_label_colour == 1:
             print(dest_filename.name, len(colours), "needs correcting colours",sorted(colourlist))
             correct_label_colours(dest_filename)
         else:
@@ -440,47 +470,35 @@ def compare_instances_to_labels(filename_labels):
     
 def verify_instance_borders(dest_dir):
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-    #counter = 0
     for dest_filename in sorted(dest_dir.glob('*instances.png')):
         s_filename = str(dest_filename)
         img = Image.open(str(s_filename)) # change to CV2
         colours = get_colour_count(img)
-    #    counter +=1
         if len(colours)>20:
-            #print(dest_filename.name, colours, len(colours), "needs correcting colours")
             print(dest_filename.name, len(colours), "needs correcting colours")
             correct_instance_colours(dest_filename)
         else:
             print(dest_filename.name, len(colours), "ok")
-    #    if counter > 90:
-    #        break
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 def verify_instance_backgrounds(dest_dir):
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-    #counter = 0
     for dest_filename in sorted(dest_dir.glob('*instances.png')):
         s_filename = str(dest_filename)
         img = Image.open(str(s_filename)) # change to CV2
-        #counter +=1
         correct_instance_backgrounds(dest_filename)
-        #if counter > 1:
-        #    break
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 def verify_instance_labels_match(dest_dir):
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
     for instance_file in sorted(dest_dir.glob('*instances.png')):
         img_instance = cv2.imread(str(instance_file), cv2.IMREAD_COLOR)
-        #img_instance = Image.open(str(instance_file)) # change to CV2**
         label_file = Path(dest_dir,instance_file.name.replace("instances","labels"))
         img_labels = cv2.imread(str(label_file), cv2.IMREAD_COLOR)
-        #img_labels = Image.open(str(label_file)) # change to CV2
         bkgs_ok, len_bkg_ins, len_bkg_lbl = instance_labels_match(img_instance,[0,0,0],img_labels,[0,0,0])
         if not bkgs_ok:
             print("Dif:", instance_file.name,"(",len_bkg_ins,")" , \
                   label_file.name, "(", len_bkg_lbl, ")" )
-            #correct_instance_contours(instance_file,img_instance,img_labels)
             create_labels_from_instances(instance_file,img_instance,img_labels)
         elif bkgs_ok:
             print("OK:in",instance_file.name, "(",len_bkg_ins,")" , \

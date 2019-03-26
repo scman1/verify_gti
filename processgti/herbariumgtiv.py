@@ -366,7 +366,7 @@ def correct_label_colours(filename_labels):
 
 def verify_label_colours(source_dir, dest_dir):
     dest_dir.mkdir(parents=True, exist_ok=True)
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    print("start:  " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
     #copy all files to dest_dir
     for filepath in sorted(source_dir.glob('*')):
          shutil.copy(str(filepath), Path(dest_dir, filepath.name))
@@ -386,7 +386,7 @@ def verify_label_colours(source_dir, dest_dir):
             correct_label_colours(dest_filename)
         else:
             print(dest_filename.name, len(colours), "ok",sorted(colourlist))
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    print("finish: " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 # change colours with counts smaller than 500 to the background colour
 def correct_instance_colours(filename_labels):
@@ -482,15 +482,15 @@ def verify_instance_borders(dest_dir):
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 def verify_instance_backgrounds(dest_dir):
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    print("start:  " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
     for dest_filename in sorted(dest_dir.glob('*instances.png')):
         s_filename = str(dest_filename)
         img = Image.open(str(s_filename)) # change to CV2
         correct_instance_backgrounds(dest_filename)
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    print("finish: " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 def verify_instance_labels_match(dest_dir):
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    print("start:  " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
     for instance_file in sorted(dest_dir.glob('*instances.png')):
         img_instance = cv2.imread(str(instance_file), cv2.IMREAD_COLOR)
         label_file = Path(dest_dir,instance_file.name.replace("instances","labels"))
@@ -503,7 +503,7 @@ def verify_instance_labels_match(dest_dir):
         elif bkgs_ok:
             print("OK:in",instance_file.name, "(",len_bkg_ins,")" , \
                   label_file.name, "(", len_bkg_lbl, ")" )
-    print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    print("finish: " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 def instance_labels_match(img_instance,ins_bkg,img_labels,lbl_bkg):
     instance_bkg = getobject(img_instance,ins_bkg)
@@ -718,12 +718,14 @@ def rezise_png_images(source_dir):
             cv2.imwrite(str(source_filename),img,params)
 
 def list_image_size(source_dir):
+    print("start:  " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
     for source_filename in source_dir.iterdir():
         #read the image
         if ".png" in source_filename.name or ".JPG"  in source_filename.name:
             img = cv2.imread(str(source_filename), cv2.IMREAD_COLOR)
             height,width,channels = img.shape
             print(source_filename.name,":",height,":",width,":",channels, ":")
+    print("finish: " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 def get_original_filename(instance_file, source_dir):
     workfile = instance_file.name.replace("_instances.png","")

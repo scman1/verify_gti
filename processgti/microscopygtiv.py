@@ -173,8 +173,11 @@ def pixels_for_ratio(img_height, img_width):
     # calculate pixels to add to maintain aspect ratio for x and y
     pix_add_x  = int(round(ppi_x * img_height/ppi_y) - img_width)
     pix_add_y = int(round(img_width * ppi_y / ppi_x) - img_height)
-
-    if pix_add_x > 0:
+    #print (pix_add_x, pix_add_y)
+    if pix_add_x < 0 and pix_add_y == 0:
+      pix_add_x = 0
+      pix_add_y = 0
+    elif pix_add_x > 0:
       pix_add_y = 0
     elif pix_add_y > 0:
         pix_add_x = 0
@@ -348,6 +351,33 @@ def correct_label_colours(filename_labels):
             img2[i,j] = colour
     cv2.imwrite(str(filename_labels),img2)
 
+def correct_close_colours4(filename_labels, colour_list):
+    # make all colours either black, white, red or yellow
+    # turning any colour channel with less than 100 will to 0
+    img_labels = cv2.imread(str(filename_labels), cv2.IMREAD_COLOR)
+    height,width,channels = img_labels.shape
+    # !!!!!!!!!!Colurs are reversed BRG not RGB!!!!!!!!!!!!
+    # openCV cv2.imread() loads images as BGR while numpy.imread() loads them as RGB.
+    for colour in colour_list:
+      colour = colour[::-1]
+      # change list to BGR: yellow = (0, 255, 255), red = (0,0,255), blue = (255,0,0)
+      if colour not in [(0, 255, 255), (0, 0, 0), (255, 255, 255), (255, 0, 0), (0, 0, 255)]:
+        replace_colour = [0,0,0]
+        if colour[0] == colour[1] == 0 and colour[2] != 0:
+            # colour close to red, replace
+            replace_colour = [0,0,255]  
+        elif colour[0] != 0 and colour[1] == colour[2] == 0:
+            # colour close to blue, replace
+            replace_colour = [255,0,0]
+        elif colour[0] == 0 and colour[1] != 0 and colour[2] != 0:
+            # colour close to yellow, replace
+            replace_colour = [0,255,255]
+        elif colour[0] != 0 and colour[1] != 0 and colour[2] != 0:
+            # colour close to white, replace
+            replace_colour = [255,255,255]
+        img_labels = replace_colour_in_image(img_labels,colour,replace_colour)
+    cv2.imwrite(str(filename_labels),img_labels)
+
 def verify_label_colours(source_dir, dest_dir):
     dest_dir.mkdir(parents=True, exist_ok=True)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
@@ -362,11 +392,12 @@ def verify_label_colours(source_dir, dest_dir):
         colourlist=[*colours]
         incorrect_label_colour = 0
         for colour in colourlist:
-            if colour not in [(255, 255, 0), (0, 0, 0), (255, 255, 255), (255, 0, 0)]:
+            if colour not in [(255, 255, 0), (0, 0, 0), (255, 255, 255), (255, 0, 0), (0, 0, 255)]:
                 incorrect_label_colour = 1
                 break
-        if len(colours)>4 or incorrect_label_colour == 1:
+        if len(colours)>5 or incorrect_label_colour == 1:
             print(dest_filename.name, len(colours), "needs correcting colours",sorted(colourlist))
+            correct_close_colours4(dest_filename, colourlist)
             correct_label_colours(dest_filename)
         else:
             print(dest_filename.name, len(colours), "ok",sorted(colourlist))
@@ -595,7 +626,15 @@ def create_labels_from_instances(instance_file,img_instance,img_labels):
         if not numpy.array_equal(colour_in_lbl, [0,0,0]):
             img_instance[numpy.where((img_instance == shape_colour).all(axis = 2))] = colour_in_lbl
     cv2.imwrite(str(instance_file).replace("instances","labels"),img_instance,params_png)
-    
+
+# image: source image to replace
+# colour: colour to replace as a list
+# replace_colour: new colour as numpy array
+def replace_colour_in_image(image,colour,replace_colour):
+    image[numpy.where((image == colour).all(axis = 2))] = replace_colour
+    #print("replace ", colour, " with ", replace_colour)
+    return image
+
 def getadjacentpixels(pixel, height, width):
     # pixel coordinates are in the form: (row, column)
     # min for both is 0

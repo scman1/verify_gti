@@ -107,17 +107,19 @@ def get_dpi_resolution(width, height):
 # scan the list of standard dpi and return the one that matches best first
 # this is the one used for the first passes of the herbarium processing
 def standard_based_dpi(img_height, img_width):
-    predicted_dpi = 0  
+    predicted_dpi = 0
     for i in standard_dpi:
         calc_width = img_width/i
         if calc_width > min_width*.95 and calc_width < max_width*1.05:
-            return i
+            predicted_dpi = i
     if predicted_dpi == 0:
         for i in standard_dpi:
             calc_height = img_height/i
             if calc_height > min_height*.95 and calc_height < max_height*1.05:
-                return i
-    return 0
+                predicted_dpi = i
+    if predicted_dpi == 0:
+      predicted_dpi = get_dpi_resolution(img_width, img_height)
+    return predicted_dpi
 
 def pixels_from_stds(img_height, img_width):
     
@@ -171,15 +173,22 @@ def pixels_for_ratio(img_height, img_width):
     ppi_y = int(round(max_height * dpi_predicted))
 
     # calculate pixels to add to maintain aspect ratio for x and y
-    pix_add_x  = int(round(ppi_x * img_height/ppi_y) - img_width)
-    pix_add_y = int(round(img_width * ppi_y / ppi_x) - img_height)
+    if ppi_y != 0:
+      pix_add_x  = int(round(ppi_x * img_height/ppi_y) - img_width)
+    else:
+      print (f'ppi_y is 0, dpi_predicted: {dpi_predicted}, height: {img_height}, width: {img_width}')
+    if ppi_x != 0:  
+      pix_add_y = int(round(img_width * ppi_y / ppi_x) - img_height)
+    else:
+      print (f'ppi_x is 0, dpi_predicted: {dpi_predicted}, height: {img_height}, width: {img_width}')
+      
 
     if pix_add_x > 0:
       pix_add_y = 0
     elif pix_add_y > 0:
         pix_add_x = 0
         
-    return dpi_predicted,pix_add_x, pix_add_y
+    return dpi_predicted, pix_add_x, pix_add_y
     
 # add borers to all images in source directory and save them to dest directory  
 def add_borders(source_dir, dest_dir):
@@ -221,13 +230,14 @@ def add_borders(source_dir, dest_dir):
 # dimensions
 #*******************************************************************************
 def add_borders2(source_dir, dest_dir):
+    print("start:  " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
     dest_dir.mkdir(parents=True, exist_ok=True)
     i=1
     img_dpis = {}
     for source_filename in sorted(source_dir.glob('*')):
         s_image = str(source_filename)
-        img = Image.open(s_image) # change to CV2
-        img_width, img_height = img.size
+        img = cv2.imread(s_image) # change to CV2
+        img_height, img_width, _ = img.shape
         #try to aproximate from standard sizes 
         dpi_predicted, pix_add_x, pix_add_y = pixels_for_ratio(img_height, img_width)
         
@@ -236,13 +246,13 @@ def add_borders2(source_dir, dest_dir):
         i=i+1
 
         # add pixels to original image as black border
-        img1 = cv2.imread(s_image)
-        resized_img= cv2.copyMakeBorder(img1,0,pix_add_y,0,pix_add_x,cv2.BORDER_CONSTANT,value=0)
+        resized_img= cv2.copyMakeBorder(img,0,pix_add_y,0,pix_add_x,cv2.BORDER_CONSTANT,value=0)
         if ("JPG" in source_filename.name):
           cv2.imwrite(str(Path(dest_dir,source_filename.name)), resized_img, params_jpg)
         elif ("png" in source_filename.name):
           cv2.imwrite(str(Path(dest_dir,source_filename.name)), resized_img, params_png)
     print(img_dpis)
+    print("end:  " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 
 # shrink images to the specified dpi width and height

@@ -635,7 +635,9 @@ def verify_instance_labels_match(dest_dir):
     print("finish: " + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 def instance_labels_match(img_instance,ins_bkg,img_labels,lbl_bkg):
+    #print(img_instance,ins_bkg)
     instance_bkg = getobject(img_instance,ins_bkg)
+    #print(img_labels,lbl_bkg)
     label_bkg = getobject(img_labels,lbl_bkg)
     bkg_ok = False
     if len(instance_bkg) != len(label_bkg):

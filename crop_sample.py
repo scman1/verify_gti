@@ -30,7 +30,7 @@ def image_crop(x, crop_size=(256,256)):
 def crop_images(source_dir, dest_dir, c_height,c_width):
     dest_dir.mkdir(parents=True, exist_ok=True)
     for source_filename in source_dir.iterdir():
-        if ".JPG"  in source_filename.name:
+        if ".jpg"  in source_filename.name:
 
             img1 = cv2.imread(str(source_filename), cv2.IMREAD_COLOR)
             #resize, flip and crop
@@ -40,14 +40,16 @@ def crop_images(source_dir, dest_dir, c_height,c_width):
 
             crop_flip = image_crop(flip_img,crop_size=(c_width,c_height))
 
-            cv2.imwrite(str(Path(dest_dir,source_filename.name.replace(".JPG","_crpf.JPG"))),crop_flip,params_jpg)
+            cv2.imwrite(str(Path(dest_dir,source_filename.name.replace(".jpg","_crpf.JPG"))),crop_flip,params_jpg)
 
 
-
-source_dir = Path(Path().absolute().parent, "slides","kewgt500")
-dest_dir = Path(Path().absolute().parent, "slides","kewgt500","cropped")
-c_height = 300
-c_width  = 800
+base_dir = "herbariumsheets/mnhn/unlabelled"
+source_dir = Path(Path().absolute().parent, base_dir)
+dest_dir = Path(Path().absolute().parent, base_dir,"cropped")
+# slides:   h   300, w   800
+# hs 96dpi: h 1,764, w 1,169
+c_height = 1764
+c_width  = 1169
 crop_images(source_dir, dest_dir, c_height,c_width)
 
 

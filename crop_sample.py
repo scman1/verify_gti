@@ -40,10 +40,10 @@ def crop_images(source_dir, dest_dir, c_height,c_width):
 
             crop_flip = image_crop(flip_img,crop_size=(c_width,c_height))
 
-            cv2.imwrite(str(Path(dest_dir,source_filename.name.replace(".jpg","_crpf.JPG"))),crop_flip,params_jpg)
+            cv2.imwrite(str(Path(dest_dir,source_filename.name.replace(".jpg","_c.JPG").replace("NMW","NMW1"))),crop_flip,params_jpg)
 
 
-base_dir = "herbariumsheets/mnhn/unlabelled"
+base_dir = "herbariumsheets/nmw/nmw_full"
 source_dir = Path(Path().absolute().parent, base_dir)
 dest_dir = Path(Path().absolute().parent, base_dir,"cropped")
 # slides:   h   300, w   800

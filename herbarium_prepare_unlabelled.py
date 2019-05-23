@@ -8,7 +8,7 @@
 from pathlib import Path
 from  processgti.herbariumgtiv import *
 
-base_dir = "herbariumsheets/mnhn/unlabelled"
+base_dir = "herbariumsheets/nmw/nmwherbarium/unlabelled"
 # Directory containing the new set of segmented images
 source_dir = Path(Path().absolute().parent, base_dir)
 print(source_dir)

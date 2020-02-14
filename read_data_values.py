@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import Counter
 import csv
+from datetime import datetime
 
 def test_files_list(source_dir,tr=8,ts=2):
     i_counter = 0
@@ -122,7 +123,7 @@ def write_csv_data(values, filename):
 
 # ground truth dataset
 def get_gt_values(argv,label_colors=None):
-    print('Arguments:', argv)
+    print(datetime.now().strftime("%Y/%m/%d %H:%M:%S"), 'Arguments:', argv)
     try:
         gt_path = argv[0]
         pr_path = argv[1]
@@ -157,6 +158,7 @@ def get_gt_values(argv,label_colors=None):
     read_gt_data(labels_dir, instances_dir, pr_dir, data_from_files,label_colors)
     out_file = pr_dir / out_file
     write_csv_data(data_from_files, out_file)
+    print("end", datetime.now().strftime("%Y/%m/%d %H:%M:%S"), 'Arguments:', argv)
 
 if __name__ == "__main__":
    label_colors = {1:[(0.0,0.0,0.0),'background'],2:[(1.0,1.0,1.0),'barcode'],

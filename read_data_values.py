@@ -102,11 +102,9 @@ def read_gt_data(labels_path, instances_path, predictions_path, gt_data, label_c
             average_diff += gt_data[indx][diff_tag]
         gt_data[indx]['cls_diff_avg'] = average_diff/class_count
         #calculate instance count differences
+        gt_data[indx]['cls_count_diff'] = abs(gt_data[indx]['gt_classes']-gt_data[indx]['pr_classes'])
         gt_data[indx]['ins_count_diff'] = abs(gt_data[indx]['gt_instances']-gt_data[indx]['pr_instances'])
-
-        if indx == 10:
-            break
-                                              
+                       
 # writes csv data to the given file name
 def write_csv_data(values, filename):
     fieldnames = []

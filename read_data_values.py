@@ -129,10 +129,13 @@ def get_gt_values(argv,label_colors=None):
         gt_path = argv[0]
         pr_path = argv[1]
         out_file = argv[2]
+        train_prop = int(argv[3])
+        test_prop = int(argv[4])
     except:
-        print("provide three arguments:"+
+        print("provide five arguments:"+
               "\n -string ground truths path\n -string predictions path"+
-              "\n -string output filename (csv)")
+              "\n -string output filename (csv)\n -integer proportion train set"+
+              "\n -integer proportion test/eval set")
         return
     gt_dir= Path(gt_path)
     # predictions dataset
@@ -142,7 +145,7 @@ def get_gt_values(argv,label_colors=None):
     labels_dir = gt_dir / 'labels'
     instances_dir = gt_dir / 'instances'
 
-    images_list = test_files_list(images_dir,8,2)
+    images_list = test_files_list(images_dir,train_prop,test_prop)
     #print (images_list)
     i=1
     data_from_files = {}

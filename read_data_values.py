@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,6 +24,15 @@ def get_colour_count(img):
     aimg= np.asarray(img)
     return Counter([tuple(colours) for i in aimg for colours in i])
 
+def get_mean_area_diff(area1, area2):
+    abs_diff = abs(area1-area2)
+    diff1 = diff2 = 0
+    if area1 != 0:
+        diff1 = abs_diff/area1
+    if area2 != 0:
+        diff2 = abs_diff/area2
+    return (diff1+diff2)/2
+
 def read_gt_data(labels_path, instances_path, predictions_path, gt_data, label_colors):
     for indx in gt_data.keys():
         gt_lbl = labels_path / gt_data[indx]['labels']
@@ -36,8 +46,9 @@ def read_gt_data(labels_path, instances_path, predictions_path, gt_data, label_c
             gt_lbl_clrs = get_colour_count(gt_lbl_img)
             gt_data[indx]['gt_classes'] = len(gt_lbl_clrs)
             for color in label_colors:
+                tag = "gt_"+label_colors[color][1]
+                gt_data[indx][tag] = 0
                 if(label_colors[color][0] in gt_lbl_clrs):
-                    tag = "gt_"+label_colors[color][1]
                     gt_data[indx][tag] = gt_lbl_clrs[label_colors[color][0]]
         if gt_ins.exists() and gt_ins.is_file():
             gt_ins_img = plt.imread(str(gt_ins))
@@ -59,8 +70,9 @@ def read_gt_data(labels_path, instances_path, predictions_path, gt_data, label_c
             gt_data[indx]['pr_classes'] = len(pr_lbl_clrs)
             for color in label_colors:
                 clr_indx = label_colors[color][0]+(1.0,)
+                tag = "pr_"+label_colors[color][1]
+                gt_data[indx][tag] = 0
                 if(clr_indx in pr_lbl_clrs):
-                    tag = "pr_"+label_colors[color][1]
                     gt_data[indx][tag] = pr_lbl_clrs[clr_indx]
         if pr_ins.exists() and pr_ins.is_file():
             pr_ins_img = plt.imread(str(pr_ins))
@@ -75,12 +87,27 @@ def read_gt_data(labels_path, instances_path, predictions_path, gt_data, label_c
                     gt_data[indx]['pr_inst_bkg'] = pr_ins_clrs[item]
             if gt_data[indx]['pr_inst_bkg'] == gt_data[indx]['pr_background']:
                 gt_data[indx]['pr_bkgs_match'] = 1
+        #calculate class differences
+        average_diff = 0
+        class_count = 0
+        for color in label_colors:
+            class_name = label_colors[color][1]
+            gt_tag = "gt_"+class_name
+            pr_tag = "pr_"+class_name
+            diff_tag = "cls_diff_"+class_name
+            gt_data[indx][diff_tag] = get_mean_area_diff(
+                gt_data[indx][gt_tag],gt_data[indx][pr_tag])
+            if gt_data[indx][diff_tag] != 0:
+                class_count += 1
+            average_diff += gt_data[indx][diff_tag]
+        gt_data[indx]['cls_diff_avg'] = average_diff/class_count
+        #calculate instance count differences
+        gt_data[indx]['ins_count_diff'] = abs(gt_data[indx]['gt_instances']-gt_data[indx]['pr_instances'])
 
-
-
-
-
-# writes data to the given file name
+        if indx == 10:
+            break
+                                              
+# writes csv data to the given file name
 def write_csv_data(values, filename):
     fieldnames = []
     for item in values.keys():
@@ -96,7 +123,17 @@ def write_csv_data(values, filename):
 
 
 # ground truth dataset
-def get_gt_values(gt_path = 'data/raw', pr_path =  'predictions', label_colors=None):
+def get_gt_values(argv,label_colors=None):
+    print('Arguments:', argv)
+    try:
+        gt_path = argv[0]
+        pr_path = argv[1]
+        out_file = argv[2]
+    except:
+        print("provide three arguments:"+
+              "\n -string ground truths path\n -string predictions path"+
+              "\n -string output filename (csv)")
+        return
     gt_dir= Path(gt_path)
     # predictions dataset
     pr_dir = Path(pr_path)
@@ -117,9 +154,11 @@ def get_gt_values(gt_path = 'data/raw', pr_path =  'predictions', label_colors=N
         i+= 1
     #print(data_from_files)
     read_gt_data(labels_dir, instances_dir, pr_dir, data_from_files,label_colors)
-    write_csv_data(data_from_files, "test_output.csv")
+    out_file = pr_dir / out_file
+    write_csv_data(data_from_files, out_file)
 
-label_colors = {1:[(0.0,0.0,0.0),'background'],2:[(1.0,1.0,1.0),'barcode'],
+if __name__ == "__main__":
+   label_colors = {1:[(0.0,0.0,0.0),'background'],2:[(1.0,1.0,1.0),'barcode'],
                 3:[(1.0,0.0,0.0),'label'],4:[(1.0,1.0,0.0),'specimen'],
                 5:[(0.0,0.0,1.0),'typelabel']}
-get_gt_values('data/raw', 'predictions/model_nhm_data_nhm', label_colors)
+   get_gt_values(sys.argv[1:], label_colors)

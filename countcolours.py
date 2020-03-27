@@ -105,6 +105,14 @@ def getcontourcorners(shape_contour):
     mid_x = int(round(min_x + (max_x-min_x)/2))
     return ((min_y, min_x), (max_y, max_x))
 
+# get the centre pixel for the circunscribed object
+def getcontourcentre(shape_contour):
+    min_x = min_y = max_x = max_y = 0
+    ((min_y, min_x), (max_y, max_x)) = getcontourcorners(shape_contour)
+    mid_y = int(round(min_y + (max_y-min_y)/2))
+    mid_x = int(round(min_x + (max_x-min_x)/2))
+    return (mid_y, mid_x)
+
 # verify if the path is a hole,
 # i.e. contained inside another path
 def is_hole(single_path, all_paths):
@@ -120,6 +128,32 @@ def is_hole(single_path, all_paths):
                     return True
     return False
 
+def contourcolours(shape_contour, lbl_img):
+    contour_colours = {}
+    for point in shape_contour:
+        point_colour = tuple(lbl_img[point])
+        if point_colour in contour_colours.keys():
+            contour_colours[point_colour] += 1
+        else:
+            contour_colours[point_colour] = 1
+    return contour_colours
+
+# use the colours on the borders to determine
+# an objects class, the proportion
+def assignclass(shape_contour, lbl_img):
+    contour_colours = contourcolours(shape_contour, lbl_img)
+    class_colour = tuple()
+    max = 0
+    for contour_colour in contour_colours:
+        if max == 0:
+            max = contour_colours[contour_colour]
+            class_colour = contour_colour
+        elif max < contour_colours[contour_colour]:
+            max = contour_colours[contour_colour]
+            class_colour = contour_colour
+            
+    return class_colour
+        
 
 # get all closed independent paths in a set of points
 def get_all_paths(big_set):
@@ -140,45 +174,99 @@ def get_all_paths(big_set):
     return all_paths
 
 
-# image file to process
-print("Start",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-img = io.imread('test/predictions/010653012_816393_1428658_labels.png')
+#***************************************
+# A-B) open predictions file and
+#      object get borders
+# Returns:
+#      Dictionary with colours as keys
+#      and shape borders lists as
+#      elements
+#        {(colour): [(paths),...]}
+#***************************************
+def get_shapes_per_colour(filename):
+    img = io.imread(filename)
 
+    # get image size and number of pixel elements
+    rows, cols, bands = img.shape
+    # discard alpha channel
+    if bands > 3:
+        img = img[:,:,:3]
+        bands = 3
+    # get a list of colour with pixel count
+    colours_list = get_colours_list(img)
+    # get number of unique colours
+    num_clusters = len(colours_list)
+    # identify background colour
+    backgrounds_skip = [(0, 0, 0)]
+    background_clr = tuple(img[0,0])
+    if not background_clr in backgrounds_skip:
+        backgrounds_skip.append(background_clr)
+    #get all shapes for each colour
+    objects = {}
+    for this_colour in colours_list:
+        #print(this_colour)
+        if not this_colour in backgrounds_skip:
+            object_pixels = getobject(img, this_colour)
+            contour_pixels = getcontour(object_pixels)
+            all_paths  = get_all_paths(contour_pixels)
+            objects[this_colour] = all_paths
+    return objects
+
+
+print("Start",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+
+# GT labels file
+gt_lbl = 'test/data/raw/labels/010668463_816414_1428267_labels.png' # labels_path / gt_data[indx]['labels']
+# GT instances file
+gt_ins = 'test/data/raw/instances/010668463_816414_1428267_instances.png' # instances_path / gt_data[indx]['instances']
+#print(predictions_path)
+# predictions labels file
+pr_lbl = 'test/predictions/010668463_816414_1428267_labels.png' # predictions_path / gt_data[indx]['labels']
+# predictions instances file
+pr_ins = 'test/predictions/010668463_816414_1428267_instances.png' # predictions_path / gt_data[indx]['instances']
+
+# Calculate TP, TN, FP, and FN for earch prediction
+# a) open the predictions instance file
+# b) for each colour in the instance, get borders.
+pr_objects = get_shapes_per_colour(pr_ins)
+
+pr_lbl_img = io.imread(pr_lbl)
 # get image size and number of pixel elements
-rows, cols, bands = img.shape
-print("Image dimensions (rows, cols, bands):",rows, cols, bands)
+rows, cols, bands = pr_lbl_img.shape
 # discard alpha channel
 if bands > 3:
-    img = img[:,:,:3]
+    pr_lbl_img = pr_lbl_img[:,:,:3]
+    bands = 3
+gt_lbl_img = io.imread(gt_lbl)
+# get image size and number of pixel elements
+rows, cols, bands = gt_lbl_img.shape
+# discard alpha channel
+if bands > 3:
+    gt_lbl_img = gt_lbl_img[:,:,:3]
     bands = 3
 
-# get a list of colour with pixel count
-colours_list = get_colours_list(img)
-# get number of unique colours
-num_clusters = len(colours_list)
 
-for this_colour in colours_list:
-    print(this_colour)
-    if this_colour not in [(0, 0, 0), (0, 0, 0, 255)]:
-        object_pixels = getobject(img, this_colour)
-        contour_pixels = getcontour(object_pixels)
-        all_paths  = get_all_paths(contour_pixels)
-        print('Colour: {}  >>  Objects: {}'.format(this_colour, len(all_paths)))
+pr_values = {}
+for an_object in pr_objects:
+    print('Colour: {}  >>  Fragments: {}'.format(an_object, len(pr_objects[an_object])))
+    # c) get the types assigned to each object fragment in predictions and GT
+    # d) compare to GT labels  to get TP and FP
+    indx = 1
+    for fragment in pr_objects[an_object]:
+        f_centre = getcontourcentre(fragment)
+        pr_class = pr_lbl_img[f_centre]
+        gt_contour_colours = contourcolours(fragment, gt_lbl_img)
+        assigned_class = assignclass(fragment, gt_lbl_img)
+        gt_class = gt_lbl_img[f_centre]
+        print(an_object, "ground truth:",gt_class, "predicted:", pr_class, gt_contour_colours,"assigned:", assigned_class)
+        pr_values[indx] = {"obj_colour":an_object, "ground truth":gt_class, "predicted":pr_class}
+
+# e) open the GT instance file
+# f) for each colour in the instance, get borders
+gt_objects = get_shapes_per_colour(gt_ins)
+
+# g) get the types assigned to each object in GT
+# h) comparte to  PR labels to get FN
+
     
-
-print("MID",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-X = img.reshape(rows*cols, bands)
-
-x_rows, x_bands = X.shape
-print (x_rows, x_bands)
-
-kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(X)
-labels = kmeans.labels_.reshape(rows, cols)
-
-for i in np.unique(labels):
-    blobs = np.int_(morphology.binary_opening(labels == i))
-    print(len(blobs))
-    color = np.around(kmeans.cluster_centers_[i])
-    count = len(np.unique(measure.label(blobs))) - 1
-    print('Color: {}  >>  Objects: {}'.format(color, count))
-print("END",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+print("END ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))

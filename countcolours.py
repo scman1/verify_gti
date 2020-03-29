@@ -215,16 +215,21 @@ def get_shapes_per_colour(filename):
 
 print("Start",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
+filename = "010668463_816414_1428267"
+filename = "010653012_816393_1428658"
+filename = "010646759_816445_1431072"
+
 # GT labels file
-gt_lbl = 'test/data/raw/labels/010668463_816414_1428267_labels.png' # labels_path / gt_data[indx]['labels']
+gt_lbl = 'test/data/raw/labels/{}_labels.png'.format(filename) # labels_path / gt_data[indx]['labels']
 # GT instances file
-gt_ins = 'test/data/raw/instances/010668463_816414_1428267_instances.png' # instances_path / gt_data[indx]['instances']
+gt_ins = 'test/data/raw/instances/{}_instances.png'.format(filename) # instances_path / gt_data[indx]['instances']
 #print(predictions_path)
 # predictions labels file
-pr_lbl = 'test/predictions/010668463_816414_1428267_labels.png' # predictions_path / gt_data[indx]['labels']
+pr_lbl = 'test/predictions/{}_labels.png'.format(filename) # predictions_path / gt_data[indx]['labels']
 # predictions instances file
-pr_ins = 'test/predictions/010668463_816414_1428267_instances.png' # predictions_path / gt_data[indx]['instances']
+pr_ins = 'test/predictions/{}_instances.png'.format(filename) # predictions_path / gt_data[indx]['instances']
 
+#***************************************************
 # Calculate TP, TN, FP, and FN for earch prediction
 # a) open the predictions instance file
 # b) for each colour in the instance, get borders.
@@ -247,26 +252,38 @@ if bands > 3:
 
 
 pr_values = {}
+indx = 1
 for an_object in pr_objects:
     print('Colour: {}  >>  Fragments: {}'.format(an_object, len(pr_objects[an_object])))
     # c) get the types assigned to each object fragment in predictions and GT
     # d) compare to GT labels  to get TP and FP
-    indx = 1
     for fragment in pr_objects[an_object]:
         f_centre = getcontourcentre(fragment)
-        pr_class = pr_lbl_img[f_centre]
-        gt_contour_colours = contourcolours(fragment, gt_lbl_img)
-        assigned_class = assignclass(fragment, gt_lbl_img)
-        gt_class = gt_lbl_img[f_centre]
-        print(an_object, "ground truth:",gt_class, "predicted:", pr_class, gt_contour_colours,"assigned:", assigned_class)
-        pr_values[indx] = {"obj_colour":an_object, "ground truth":gt_class, "predicted":pr_class}
+        assign_pr_class = assignclass(fragment, pr_lbl_img)
+        gt_class = tuple(gt_lbl_img[f_centre])
+        print(an_object, "ground truth:",gt_class, "predicted:", assign_pr_class)
+        pr_values[indx] = {"obj_colour":an_object, "ground truth":gt_class, "predicted":assign_pr_class}
+        indx +=1
 
+print("PR Done ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))        
+#***************************************************
 # e) open the GT instance file
 # f) for each colour in the instance, get borders
+
 gt_objects = get_shapes_per_colour(gt_ins)
 
-# g) get the types assigned to each object in GT
-# h) comparte to  PR labels to get FN
-
+gt_values = {}
+indx = 1
+for an_object in gt_objects:
+    print('Colour: {}  >>  Fragments: {}'.format(an_object, len(gt_objects[an_object])))
+    # g) get the types assigned to each object in GT
+    # h) comparte to  PR labels to get FN
+    for fragment in gt_objects[an_object]:
+        f_centre = getcontourcentre(fragment)
+        pr_class = tuple(pr_lbl_img[f_centre])
+        gt_class = tuple(gt_lbl_img[f_centre])
+        print(an_object, "ground truth:",gt_class, "predicted:", pr_class)
+        gt_values[indx] = {"obj_colour":an_object, "ground truth":gt_class, "predicted":pr_class}
+        indx +=1
     
-print("END ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+print("GT Done",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))

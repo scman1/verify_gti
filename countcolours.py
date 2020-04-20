@@ -330,6 +330,11 @@ def get_gt_values(argv,label_colors=None):
             # d) compare to GT labels  to get TP and FP
             for fragment in pr_objects[an_object]:
                 f_centre = getcontourcentre(fragment)
+                # correct for difference in size of images
+                if f_centre[0] >= rows:
+                    f_centre = (-1, f_centre[1])
+                if f_centre[1] >= cols:
+                    f_centre = (f_centre[0], cols -1)    
                 assign_pr_class = assignclass(fragment, pr_lbl_img)
                 gt_class = tuple(gt_lbl_img[f_centre])
                 print(an_object, "ground truth:",gt_class, "predicted:", assign_pr_class)

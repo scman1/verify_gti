@@ -1,10 +1,58 @@
 import numpy as np
-from skimage import io, morphology, measure
-from sklearn.cluster import KMeans
+from skimage import io#, morphology, measure
+#from sklearn.cluster import KMeans
 from datetime import datetime
 import csv
 from pathlib import Path
 import sys
+
+# add results to a DB
+import sqlite3
+from sqlite3 import Error
+
+def create_connection(db_file):
+    # create a database connection to a SQLite database """
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+        print(sqlite3.version)
+    except Error as e:
+        print(e)
+    finally:
+        if conn:
+            return conn
+        else:
+            conn.close()
+            
+def create_table(conn, create_table_sql):
+    # create a table from the create_table_sql statement
+    # :param conn: Connection object
+    # :param create_table_sql: a CREATE TABLE statement
+    # :return:
+    
+    try:
+        c = conn.cursor()
+        c.execute(create_table_sql)
+    except Error as e:
+        print(e)
+
+def insert_obj(conn, table, obj):
+    obj_keys = ""
+    obj_values = ""
+    for key in obj:
+        if obj_keys =="":
+            obj_keys = key
+            obj_values = "'" + str(obj[key]) + "'"
+        else:
+            obj_keys += ", " + key
+            obj_values += ", '" + str(obj[key]) + "'"
+    insert_stmt = "INSERT INTO {} ({}) VALUES ({})".format(table, obj_keys, obj_values)
+    
+    cur = conn.cursor()
+    cur.execute(insert_stmt)
+    conn.commit()
+    return cur.lastrowid
+
 
 # writes data to the given file name
 def write_csv_data(values, filename):
@@ -256,6 +304,19 @@ def get_gt_values(argv,label_colors=None):
               "\n -string output filename (csv)\n -integer proportion train set"+
               "\n -integer proportion test/eval set")
         return
+    # insert objects directly into SQLite DB
+    # set table name
+    table_name = out_file[:-4]
+    # create DB
+    conn = create_connection(r"hs_gtprverify.sqlite")
+    # create table
+    create_stmt = " CREATE TABLE IF NOT EXISTS "+ table_name + \
+                  "(id integer PRIMARY KEY, file text, " + \
+                  "source text, obj_colour text, ground_truth text, "+ \
+                  "predicted text); "
+    create_table(conn, create_stmt)
+
+    
     gt_dir= Path(gt_path)
     # predictions dataset
     pr_dir = Path(pr_path)
@@ -264,6 +325,7 @@ def get_gt_values(argv,label_colors=None):
     labels_dir = gt_dir / 'labels'
     instances_dir = gt_dir / 'instances'
 
+    
     # get a list of the files to compare
     file_list = test_files_list(images_dir,train_prop,test_prop)
 
@@ -314,12 +376,14 @@ def get_gt_values(argv,label_colors=None):
                 f_centre = getcontourcentre(fragment)
                 pr_class = tuple(pr_lbl_img[f_centre])
                 gt_class = tuple(gt_lbl_img[f_centre])
-                print(an_object, "ground truth:",gt_class, "predicted:", pr_class)
-                ob_values[indx] = {"file":filename, "source":"GT","obj_colour":an_object, "ground truth":gt_class, "predicted":pr_class}
+                print(an_object, "ground_truth:",gt_class, "predicted:", pr_class)
+                ob_values[indx] = {"file":filename, "source":"GT","obj_colour":an_object, "ground_truth":gt_class, "predicted":pr_class}
+                new_id = insert_obj(conn, table_name, ob_values[indx])
+                print("inserted object with id:", new_id)
                 indx +=1
             
         print("file:",filename, "GT Done",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-
+        #print(ob_values)
         # a) open the predictions instance file
         # b) for each colour in the instance, get borders.
         pr_objects = get_shapes_per_colour(pr_ins)
@@ -337,10 +401,12 @@ def get_gt_values(argv,label_colors=None):
                     f_centre = (f_centre[0], cols -1)    
                 assign_pr_class = assignclass(fragment, pr_lbl_img)
                 gt_class = tuple(gt_lbl_img[f_centre])
-                print(an_object, "ground truth:",gt_class, "predicted:", assign_pr_class)
-                ob_values[indx] = {"file":filename, "source":"PR", "obj_colour":an_object, "ground truth":gt_class, "predicted":assign_pr_class}
+                print(an_object, "ground_truth:",gt_class, "predicted:", assign_pr_class)
+                ob_values[indx] = {"file":filename, "source":"PR", "obj_colour":an_object, "ground_truth":gt_class, "predicted":assign_pr_class}
+                new_id = insert_obj(conn, table_name, ob_values[indx])
+                print("inserted object with id:", new_id)
                 indx +=1
-
+        #print(ob_values)
         print("file:",filename, "PR Done ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))        
         
     print("fragments detected:", indx)

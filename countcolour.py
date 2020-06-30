@@ -92,8 +92,8 @@ def get_img_contours(im):
             imgray = cv2.cvtColor(test,cv2.COLOR_BGR2GRAY)
             ret,thresh = cv2.threshold(imgray,127,255,cv2.THRESH_BINARY)
             contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-            #print(image)
-            #print(contours)
+            # the raven version needs the line below instead of the line above
+            #an_img, contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
             img_contours[this_colour]=contours
     return img_contours
 
@@ -112,7 +112,6 @@ def get_cnt_centre(cnt):
 def get_cnt_corners(shape_contour):
     min_x = min_y = max_x = max_y = 0
     for pair in shape_contour:
-        #print("Pair:", pair)
         if min_x==min_y==max_y==max_x==0:
             min_y, min_x = pair[0]
             max_y, max_x = pair[0]
@@ -125,12 +124,10 @@ def get_cnt_corners(shape_contour):
                 max_y = pair[0][0]
             if pair[0][1] > max_x:
                 max_x = pair[0][1]
-    #print ((min_y, min_x), (max_y, max_x))
     return ((min_y, min_x), (max_y, max_x))
 
 # get the centre pixel for the circunscribed object
 def get_cnt_centre2(shape_contour):
-    #print(shape_contour)
     min_x = min_y = max_x = max_y = 0
     ((min_y, min_x), (max_y, max_x)) = get_cnt_corners(shape_contour)
     mid_y = int(round(min_y + (max_y-min_y)/2))
@@ -139,7 +136,8 @@ def get_cnt_centre2(shape_contour):
 
 # ground truth dataset
 def get_gt_values(argv):
-    print("Start",datetime.now().strftime("%Y/%m/%d %H:%M:%S"), 'Arguments:', argv)
+    print("Start",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
+    print('Arguments:', argv)
     try:
         gt_path = argv[0]
         pr_path = argv[1]
@@ -176,8 +174,7 @@ def get_gt_values(argv):
     # get a list of the files to compare
     file_list = test_files_list(images_dir,train_prop,test_prop)
 
-    print("Start",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
-    print(file_list)
+    print("Files: ", file_list)
 
     for filename in file_list:
         

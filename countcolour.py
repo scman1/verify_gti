@@ -138,7 +138,7 @@ def get_cnt_centre2(shape_contour):
     return (mid_y, mid_x)
 
 # ground truth dataset
-def get_gt_values(argv,label_colors=None):
+def get_gt_values(argv):
     print("Start",datetime.now().strftime("%Y/%m/%d %H:%M:%S"), 'Arguments:', argv)
     try:
         gt_path = argv[0]
@@ -156,7 +156,7 @@ def get_gt_values(argv,label_colors=None):
     # set table name
     table_name = out_file[:-4]
     # create DB
-    conn = create_connection(r"gtprverify.sqlite")
+    conn = create_connection(r"gtprv_ms.sqlite")
     # create table
     create_stmt = " CREATE TABLE IF NOT EXISTS "+ table_name + \
                   "(id integer PRIMARY KEY, file text, " + \
@@ -242,7 +242,4 @@ def get_gt_values(argv,label_colors=None):
     conn.close()
 	
 if __name__ == "__main__":
-   label_colors = {1:[(0.0,0.0,0.0),'background'],2:[(1.0,1.0,1.0),'barcode'],
-                3:[(1.0,0.0,0.0),'label'],4:[(1.0,1.0,0.0),'specimen'],
-                5:[(0.0,0.0,1.0),'typelabel']}
-   get_gt_values(sys.argv[1:], label_colors)
+   get_gt_values(sys.argv[1:])

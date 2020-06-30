@@ -98,20 +98,18 @@ def get_img_contours(im):
     return img_contours
 
 def get_cnt_centre(cnt):
-    M = cv2.moments(cnt[0])
-    #print(M)
+    M = cv2.moments(cnt)
     c_ctr = None
     if M['m00']!=0:
         cx = int(M['m10']/M['m00'])
         cy = int(M['m01']/M['m00'])
         c_ctr = (cy,cx)
     else:
-        c_ctr = get_cnt_centre2(cnt[0])
+        c_ctr = get_cnt_centre2(cnt)
     return c_ctr
 
 # get the corners of the circunscribed rectangle
 def get_cnt_corners(shape_contour):
-    #print(shape_contour)
     min_x = min_y = max_x = max_y = 0
     for pair in shape_contour:
         #print("Pair:", pair)
@@ -207,16 +205,17 @@ def get_gt_values(argv,label_colors=None):
         # c) get the types assigned to each object fragment in predictions and GT
         # d) compare to GT labels  to get TP and FP
         for an_object in gt_objects:
-            f_centre = get_cnt_centre(gt_objects[an_object])
-            if f_centre[0] >= rows:
-                f_centre = (-1, f_centre[1])
-            if f_centre[1] >= cols:
-                f_centre = (f_centre[0], cols -1)    
-            gt_class = tuple(gt_lbl_img[f_centre])
-            pr_class = tuple(pr_lbl_img[f_centre])
-            ob_values = {"file":filename, "source":"GT", "obj_colour":an_object, "ground_truth":gt_class, "predicted":pr_class}
-            new_id = insert_obj(conn, table_name, ob_values)
-            print("inserted object:", ob_values, "with id:", new_id)  
+            for fragment in gt_objects[an_object]:
+                f_centre = get_cnt_centre(fragment)
+                if f_centre[0] >= rows:
+                    f_centre = (-1, f_centre[1])
+                if f_centre[1] >= cols:
+                    f_centre = (f_centre[0], cols -1)    
+                gt_class = tuple(gt_lbl_img[f_centre])
+                pr_class = tuple(pr_lbl_img[f_centre])
+                ob_values = {"file":filename, "source":"GT", "obj_colour":an_object, "ground_truth":gt_class, "predicted":pr_class}
+                new_id = insert_obj(conn, table_name, ob_values)
+                print("inserted object:", ob_values, "with id:", new_id)  
 
         # f) open the predictions instance file
         # g) for each colour in the instance, get borders.
@@ -225,16 +224,18 @@ def get_gt_values(argv,label_colors=None):
         # h) get the types assigned to each object fragment in predictions and GT
         # i) compare to GT labels  to get TP and FP
         for an_object in pr_objects:
-            f_centre = get_cnt_centre(pr_objects[an_object])
-            if f_centre[0] >= rows:
-                f_centre = (-1, f_centre[1])
-            if f_centre[1] >= cols:
-                f_centre = (f_centre[0], cols -1)    
-            gt_class = tuple(gt_lbl_img[f_centre])
-            pr_class = tuple(pr_lbl_img[f_centre])
-            ob_values = {"file":filename, "source":"PR", "obj_colour":an_object, "ground_truth":gt_class, "predicted":pr_class}
-            new_id = insert_obj(conn, table_name, ob_values)
-            print("inserted object:", ob_values, "with id:", new_id)  
+            for fragment in pr_objects[an_object]:
+                f_centre = get_cnt_centre(fragment)
+                if f_centre[0] >= rows:
+                    f_centre = (-1, f_centre[1])
+                if f_centre[1] >= cols:
+                    f_centre = (f_centre[0], cols -1)    
+                gt_class = tuple(gt_lbl_img[f_centre])
+                pr_class = tuple(pr_lbl_img[f_centre])
+                ob_values = {"file":filename, "source":"PR", "obj_colour":an_object, "ground_truth":gt_class, "predicted":pr_class}
+                new_id = insert_obj(conn, table_name, ob_values)
+                print("inserted object:", ob_values, "with id:", new_id)
+                
     print("Finish: ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
     # i) categorise results to obtain TP, TN, FP and FN for each file
     # Add to DB, use queries to summarise

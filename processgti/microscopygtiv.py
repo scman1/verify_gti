@@ -767,7 +767,7 @@ def get_original_filename(instance_file, source_dir):
     return list(instance_file)[0]
     
 # using CV2, use instances to generate labels
-def extract_segments(image_file,img_instance,img_labels):
+def extract_segments(image_file,img_instance,img_labels, transform_factor=800):
     print("processing", image_file)
     height,width,channels = img_instance.shape
     # get all shapes in the instances image
@@ -789,6 +789,9 @@ def extract_segments(image_file,img_instance,img_labels):
     bkgs_match = False
     # for each shape
     for shape_colour in colours:
+        print(shape_colour)
+        print(colours)
+        print(len(colours))
         shape_pixels = getobject(img_instance, shape_colour)
     # get shape contour
         shape_contour = getcontour(shape_pixels)
@@ -799,21 +802,32 @@ def extract_segments(image_file,img_instance,img_labels):
         y = int(centre_pixel[0]) # row
         colour_in_lbl = img_labels[y,x]
         #open the original file
+        print("Image File",image_file)
         full_image = cv2.imread(str(image_file))
+        print("Full image:",full_image)
         #recalculate pixels added to width
         img_height,img_width,_ = full_image.shape
         _, pix_add_x, _ = pixels_for_ratio(img_height, img_width)
         width_calc = img_width + pix_add_x
         # get contour corners
         corner_pixels = getcontourcorners(shape_contour)
+        print(corner_pixels)
         # transform corner coordinates to resolution of the original image
         #for initial test no transformation is needed
-        x1 = int(corner_pixels[0][1]*img_width/800) # column
-        y1 = int(corner_pixels[0][0]*img_width/800) # row
-        x2 = int(corner_pixels[1][1]*img_width/800) # column
-        y2 = int(corner_pixels[1][0]*img_width/800) # row
+        x1 = int(corner_pixels[0][1]) # column
+        y1 = int(corner_pixels[0][0]) # row
+        x2 = int(corner_pixels[1][1]) # column
+        y2 = int(corner_pixels[1][0]) # row
+        if transform_factor != 1:
+            x1 = int(corner_pixels[0][1]*img_width/transform_factor) # column
+            y1 = int(corner_pixels[0][0]*img_width/transform_factor) # row
+            x2 = int(corner_pixels[1][1]*img_width/transform_factor) # column
+            y2 = int(corner_pixels[1][0]*img_width/transform_factor) # row
         #get the segment from the full image
+        print (x1,y1,x2,y2)
         segment = full_image[y1:y2, x1:x2]
+        print("SEGMENT: ", segment)
+        print("full",full_image)
         suffix = "_"
         # use colour in centre to get segment type
         # if blue save segment as type label
@@ -832,16 +846,22 @@ def extract_segments(image_file,img_instance,img_labels):
         elif numpy.array_equal(colour_in_lbl, [255,255,255]):
             suffix += "bcd"+'{:02d}'.format(bcds_i)
             bcds_i+=1
-        cv2.imwrite(str(image_file).replace(".jpg",suffix+".jpg"),segment,params_jpg)
+        print(str(image_file).lower().replace(".jpg",suffix+".jpg"))
+        #if not segment == None:
+        cv2.imwrite(str(image_file).lower().replace(".jpg",suffix+".jpg"),segment,params_jpg)
 
 def extract_segments_from_files(instances_dir, full_image_dir):
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+    print("Instance:", instances_dir)
     for instance_file in sorted(instances_dir.glob('*instances.png')):
+        print("Instance:",instance_file.name)
         img_instance = cv2.imread(str(instance_file), cv2.IMREAD_COLOR)
         label_file = Path(instances_dir,instance_file.name.replace("instances","labels"))
         img_labels = cv2.imread(str(label_file), cv2.IMREAD_COLOR)
+        print(instance_file,full_image_dir)
         image_file = get_original_filename(instance_file, full_image_dir)
-        extract_segments(image_file,img_instance,img_labels)
+        extract_segments(image_file,img_instance,img_labels,transform_factor=1)
+        break
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
 

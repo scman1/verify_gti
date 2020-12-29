@@ -1,6 +1,7 @@
 import numpy as np
 from datetime import datetime
 from pathlib import Path
+import csv
 import sys
 import cv2
 
@@ -237,28 +238,53 @@ def get_gt_values(argv):
     # Add to DB, use queries to summarise
     conn.close()
 
+def get_files_list(str_path, partial_limit = 0):
+    i_counter = 0
+    files_list = []
+    for filepath in sorted(Path(str_path).glob('*.JPG')):
+        i_counter += 1
+        files_list.append(Path(filepath).name[:-4])
+        print(i_counter, filepath)
+        if partial_limit != 0 and i_counter == partial_limit:
+            break    
+    return files_list
 
-def build_yolo_gt(argv):
+def get_label(color_val, label_colors):
+    label_str = ""
+    for val in label_colors:
+        if label_colors[val][0] == color_val:
+            label_str = label_colors[val][1]
+    return label_str
+
+# writes data to the given file name
+def write_csv_data(values, filename):
+    fieldnames = []
+    for item in values.keys():
+        for key in values[item].keys():
+            if not key in fieldnames:
+                fieldnames.append(key)
+    #write back to a new csv file
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for key in values.keys():
+            writer.writerow(values[key])
+
+def build_yolo_gt(argv, label_colors = None):
     print("Start: ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
     print('Arguments:', argv)
     try:
         gt_path = argv[0]
+        out_file = argv[1]
     except:
-        print("provide five arguments:"+
-              "\n -string ground truths path\n -string predictions path"+
-              "\n -string output filename (csv)\n -integer proportion train set"+
-              "\n -integer proportion test/eval set")
+        print("missing arguments:"+
+              "\n -ground truths path"+
+              "\n -output filename (csv)")
         return
-    i_counter = 0
-    files_list = []
-    for filepath in sorted(Path(gt_path).glob('*.JPG')):
-        i_counter += 1
-        files_list.append(Path(filepath).name[:-4])
-        print(i_counter, filepath)
-        if i_counter == 10:
-            break    
-    print(i_counter, files_list)
-
+    files_list = get_files_list(gt_path, 10)
+    print(len(files_list), files_list)
+    indx = 0
+    ob_values = {}
     for filename in files_list:    
         # GT labels file
         gt_lbl = Path(gt_path, filename+'_labels.png')
@@ -283,18 +309,23 @@ def build_yolo_gt(argv):
                     f_centre = (-1, f_centre[1])
                 if f_centre[1] >= 800:
                     f_centre = (f_centre[0], cols -1)    
-                gt_class = tuple(gt_lbl_img[f_centre])
+                gt_class = tuple(gt_lbl_img[f_centre]/255)
+                class_lbl = get_label(gt_class, label_colors)
                 gt_corners = get_cnt_corners(fragment)
-                ob_values = {"file":filename, "source":"GT", "obj_colour":an_object, "ground_truth":gt_class, "centre":f_centre, "corners":gt_corners}
-                
-                #new_id = insert_obj(conn, table_name, ob_values)
-                print("object:", ob_values)#, "with id:", new_id)  
+                ob_values[indx] = {"file":filename, "gt_class":gt_class,
+                             "class_lbl":class_lbl,"centre_x":f_centre[1],
+                             "centre_y":f_centre[0], "tr_x":gt_corners[0][0],
+                             "tr_y":gt_corners[0][1], "ll_x":gt_corners[1][0],
+                             "ll_y":gt_corners[1][1]}
+                indx +=1
+        print("objects:", len(ob_values))  
 
+    write_csv_data(ob_values,out_file)
 
     print("End:   ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
-
-
 if __name__ == "__main__":
-   #get_gt_values(sys.argv[1:])
-    build_yolo_gt(sys.argv[1:])
+    label_colors = {1:[(0.0,0.0,0.0),'background'],2:[(1.0,1.0,1.0),'barcode'],
+                3:[(1.0,0.0,0.0),'typelabel'],4:[(0.0,1.0,1.0),'specimen'],
+                5:[(0.0,0.0,1.0),'label']}
+    build_yolo_gt(sys.argv[1:], label_colors)

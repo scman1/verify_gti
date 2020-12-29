@@ -95,7 +95,7 @@ def get_files_list(str_path, partial_limit = 0):
     for filepath in sorted(Path(str_path).glob('*.JPG')):
         i_counter += 1
         files_list.append(Path(filepath).name[:-4])
-        print(i_counter, filepath)
+        #print(i_counter, filepath)
         if partial_limit != 0 and i_counter == partial_limit:
             break    
     return files_list
@@ -132,17 +132,17 @@ def build_yolo_gt(argv, label_colors = None):
               "\n -ground truths path"+
               "\n -output filename (csv)")
         return
-    files_list = get_files_list(gt_path, 10)
-    print(len(files_list), files_list)
+    files_list = get_files_list(gt_path, 0)
+    #print(len(files_list), files_list)
     indx = 0
     ob_values = {}
     for filename in files_list:    
         # GT labels file
         gt_lbl = Path(gt_path, filename+'_labels.png')
-        print(gt_lbl)
+        #print(gt_lbl)
         # GT instances file
         gt_ins = Path(gt_path, filename+'_instances.png')
-        print(gt_ins)
+        #print(gt_ins)
         gt_lbl_img = cv2.imread(str(gt_lbl))
         rows, cols, bands = gt_lbl_img.shape
         #show_image(gt_lbl_img, "GT labels")
@@ -176,10 +176,8 @@ def build_yolo_gt(argv, label_colors = None):
                              "yolo_height": (gt_corners[1][0]-gt_corners[0][0])/rows,
                              "yolo_width": (gt_corners[1][1] -gt_corners[0][1])/cols}
                 indx +=1
-        print("objects:", len(ob_values))  
-
+        #print("objects:", len(ob_values))
     write_csv_data(ob_values,out_file)
-
     print("End:   ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
 if __name__ == "__main__":

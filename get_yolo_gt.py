@@ -144,10 +144,12 @@ def build_yolo_gt(argv, label_colors = None):
         gt_ins = Path(gt_path, filename+'_instances.png')
         print(gt_ins)
         gt_lbl_img = cv2.imread(str(gt_lbl))
+        rows, cols, bands = gt_lbl_img.shape
         #show_image(gt_lbl_img, "GT labels")
         # a) open the GT instance file
         # b) for each colour in the instance, get borders
         gt_ins_img = cv2.imread(str(gt_ins))
+        
         #show_image(gt_ins_img, "GT instances")
         gt_objects = get_img_contours(gt_ins_img)
         #print(gt_objects)
@@ -169,7 +171,10 @@ def build_yolo_gt(argv, label_colors = None):
                              "tr_y": gt_corners[0][1], "ll_x": gt_corners[1][0],
                              "ll_y": gt_corners[1][1],
                              "height": gt_corners[1][0]-gt_corners[0][0],
-                             "width": gt_corners[1][1] -gt_corners[0][1]}
+                             "width": gt_corners[1][1] -gt_corners[0][1],
+                             "yolo_cx":f_centre[1]/cols, "yolo_cy": f_centre[0]/rows,
+                             "yolo_height": (gt_corners[1][0]-gt_corners[0][0])/rows,
+                             "yolo_width": (gt_corners[1][1] -gt_corners[0][1])/cols}
                 indx +=1
         print("objects:", len(ob_values))  
 

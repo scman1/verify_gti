@@ -163,11 +163,13 @@ def build_yolo_gt(argv, label_colors = None):
                 gt_class = tuple(gt_lbl_img[f_centre]/255)
                 class_lbl = get_label(gt_class, label_colors)
                 gt_corners = get_cnt_corners(fragment)
-                ob_values[indx] = {"file":filename, "gt_class":gt_class,
-                             "class_lbl":class_lbl,"centre_x":f_centre[1],
-                             "centre_y":f_centre[0], "tr_x":gt_corners[0][0],
-                             "tr_y":gt_corners[0][1], "ll_x":gt_corners[1][0],
-                             "ll_y":gt_corners[1][1]}
+                ob_values[indx] = {"file" : filename, "gt_class" : gt_class,
+                             "class_lbl" : class_lbl,"centre_x" : f_centre[1],
+                             "centre_y" : f_centre[0], "tr_x": gt_corners[0][0],
+                             "tr_y": gt_corners[0][1], "ll_x": gt_corners[1][0],
+                             "ll_y": gt_corners[1][1],
+                             "height": gt_corners[1][0]-gt_corners[0][0],
+                             "width": gt_corners[1][1] -gt_corners[0][1]}
                 indx +=1
         print("objects:", len(ob_values))  
 

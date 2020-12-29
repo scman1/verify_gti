@@ -158,9 +158,9 @@ def build_yolo_gt(argv, label_colors = None):
         for an_object in gt_objects:
             for fragment in gt_objects[an_object]:
                 f_centre = get_cnt_centre(fragment)
-                if f_centre[0] >= 300:
+                if f_centre[0] >= rows:
                     f_centre = (-1, f_centre[1])
-                if f_centre[1] >= 800:
+                if f_centre[1] >= cols:
                     f_centre = (f_centre[0], cols -1)    
                 gt_class = tuple(gt_lbl_img[f_centre]/255)
                 class_lbl = get_label(gt_class, label_colors)

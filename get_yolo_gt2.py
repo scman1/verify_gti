@@ -377,6 +377,14 @@ def get_files_list(str_path, partial_limit = 0):
             break    
     return files_list
 
+def get_label(color_val, label_colors):
+    label_str = ""
+    for val in label_colors:
+        if label_colors[val][0] == color_val:
+            label_str = label_colors[val][1]
+    return label_str
+
+
 def build_yolo_gt(argv, label_colors=None):
     print("Start: ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
     print('Arguments:', argv)
@@ -409,13 +417,16 @@ def build_yolo_gt(argv, label_colors=None):
         # a) open GT instance file and get the objects
         # for each colour in the instance
         gt_objects = get_shapes_per_colour(gt_ins)
+
+        
         #print(gt_objects)
         # c) get the types assigned to each object fragment in predictions and GT
         # d) compare to GT labels  to get TP and FP
         for an_object in gt_objects:
             for fragment in gt_objects[an_object]:
                 f_centre = getcontourcentre(fragment)
-                gt_class = tuple(gt_lbl_img[f_centre])
+                gt_class = assignclass(fragment, gt_lbl_img)
+                class_lbl = get_label(gt_class, label_colors)
                 gt_corners = getcontourcorners(fragment)
                 ob_values[indx] = {"file" : filename, "gt_class" : gt_class,
                              "class_lbl" : class_lbl,"centre_x" : f_centre[1],

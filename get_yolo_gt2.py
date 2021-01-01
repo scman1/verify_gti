@@ -6,54 +6,6 @@ import csv
 from pathlib import Path
 import sys
 
-# add results to a DB
-import sqlite3
-from sqlite3 import Error
-
-def create_connection(db_file):
-    # create a database connection to a SQLite database """
-    conn = None
-    try:
-        conn = sqlite3.connect(db_file)
-        print(sqlite3.version)
-    except Error as e:
-        print(e)
-    finally:
-        if conn:
-            return conn
-        else:
-            conn.close()
-            
-def create_table(conn, create_table_sql):
-    # create a table from the create_table_sql statement
-    # :param conn: Connection object
-    # :param create_table_sql: a CREATE TABLE statement
-    # :return:
-    
-    try:
-        c = conn.cursor()
-        c.execute(create_table_sql)
-    except Error as e:
-        print(e)
-
-def insert_obj(conn, table, obj):
-    obj_keys = ""
-    obj_values = ""
-    for key in obj:
-        if obj_keys =="":
-            obj_keys = key
-            obj_values = "'" + str(obj[key]) + "'"
-        else:
-            obj_keys += ", " + key
-            obj_values += ", '" + str(obj[key]) + "'"
-    insert_stmt = "INSERT INTO {} ({}) VALUES ({})".format(table, obj_keys, obj_values)
-    
-    cur = conn.cursor()
-    cur.execute(insert_stmt)
-    conn.commit()
-    return cur.lastrowid
-
-
 # writes data to the given file name
 def write_csv_data(values, filename):
     fieldnames = []
@@ -72,7 +24,6 @@ def write_csv_data(values, filename):
 def get_colours_list(img):
     aimg= np.asarray(img)
     return set( tuple(v) for m2d in aimg for v in m2d )
-
 
 #get contour pixels from an object
 def getcontour(pixels):
@@ -104,7 +55,6 @@ def getobject(img, colour):
     indices = np.where(np.all(np.array(img) == colour, axis=-1))
     pixels = list(zip(indices[0], indices[1]))
     return pixels
-
 
 # split the indeppedent paths in a large set of nodes
 def get_neighbours(point, all_points):
@@ -426,7 +376,6 @@ def get_files_list(str_path, partial_limit = 0):
         if partial_limit != 0 and i_counter == partial_limit:
             break    
     return files_list
-    
 
 def build_yolo_gt(argv, label_colors=None):
     print("Start: ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
@@ -464,7 +413,7 @@ def build_yolo_gt(argv, label_colors=None):
             for fragment in gt_objects[an_object]:
                 f_centre = getcontourcentre(fragment)
                 gt_class = tuple(gt_lbl_img[f_centre])
-                gt_corners = get_cnt_corners(fragment)
+                gt_corners = getcontourcorners(fragment)
                 ob_values = {"file":filename, "source":"GT", "obj_colour":an_object, "ground_truth":gt_class, "centre":f_centre, "corners":gt_corners}
                 #new_id = insert_obj(conn, table_name, ob_values)
                 print("object:", ob_values)#, "with id:", new_id)  

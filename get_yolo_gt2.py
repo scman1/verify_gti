@@ -382,20 +382,23 @@ def build_yolo_gt(argv, label_colors=None):
     print('Arguments:', argv)
     try:
         gt_path = argv[0]
+        out_file = argv[1]
     except:
         print("provide five arguments:"+
               "\n -string  ground truths path")
         return
-    files_list = get_files_list(gt_path,10)    
-    print(len(files_list), files_list)
+    files_list = get_files_list(gt_path,0)    
+    #print(len(files_list), files_list)
 
+    indx = 0
+    ob_values = {}
     for filename in files_list:    
         # GT labels file
         gt_lbl = Path(gt_path, filename+'_labels.png')
-        print(gt_lbl)
+        #print(gt_lbl)
         # GT instances file
         gt_ins = Path(gt_path, filename+'_instances.png')
-        print(gt_ins)
+        #print(gt_ins)
         gt_lbl_img = io.imread(str(gt_lbl))
         # get image size and number of pixel elements
         rows, cols, bands = gt_lbl_img.shape
@@ -414,10 +417,19 @@ def build_yolo_gt(argv, label_colors=None):
                 f_centre = getcontourcentre(fragment)
                 gt_class = tuple(gt_lbl_img[f_centre])
                 gt_corners = getcontourcorners(fragment)
-                ob_values = {"file":filename, "source":"GT", "obj_colour":an_object, "ground_truth":gt_class, "centre":f_centre, "corners":gt_corners}
+                ob_values[indx] = {"file" : filename, "gt_class" : gt_class,
+                             "class_lbl" : class_lbl,"centre_x" : f_centre[1],
+                             "centre_y" : f_centre[0], "tr_x": gt_corners[0][0],
+                             "tr_y": gt_corners[0][1], "ll_x": gt_corners[1][0],
+                             "ll_y": gt_corners[1][1],
+                             "height": gt_corners[1][0]-gt_corners[0][0],
+                             "width": gt_corners[1][1] -gt_corners[0][1],
+                             "yolo_cx":f_centre[1]/cols, "yolo_cy": f_centre[0]/rows,
+                             "yolo_height": (gt_corners[1][0]-gt_corners[0][0])/rows,
+                             "yolo_width": (gt_corners[1][1] -gt_corners[0][1])/cols}
                 #new_id = insert_obj(conn, table_name, ob_values)
-                print("object:", ob_values)#, "with id:", new_id)  
-
+                #print("object:", ob_values)#, "with id:", new_id)  
+    write_csv_data(ob_values,out_file)
     print("End:   ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
 

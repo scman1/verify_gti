@@ -1,9 +1,8 @@
 import numpy as np
 from skimage import io#, morphology, measure
-#from sklearn.cluster import KMeans
 from datetime import datetime
-import csv
 from pathlib import Path
+import csv
 import sys
 from tqdm import tqdm
 
@@ -189,10 +188,9 @@ def get_all_paths(big_set):
             all_paths.remove(a_hole)
     return all_paths
 
-
-#***************************************
-# A-B) open predictions file and
-#      object get borders
+#****************************************
+# open gt file and get objects per colour
+#
 # Returns:
 #      Dictionary with colours as keys
 #      and shape borders lists as
@@ -265,21 +263,23 @@ def build_yolo_gt(argv, label_colors=None):
         gt_path = argv[0]
         out_file = argv[1]
     except:
-        print("provide five arguments:"+
-              "\n -string  ground truths path")
+        print("provide arguments:"+
+              "\n -string  ground truths path"+
+              "\n -string output filename")
         return
+    # get the list of image files
     files_list = get_files_list(gt_path,0)    
-    #print(len(files_list), files_list)
-
+    
     indx = 0
     ob_values = {}
+    # for each file get gt instances and
+    # assing class to each instance
     for filename in tqdm(files_list):    
-        # GT labels file
+        # set GT labels[class] file name
         gt_lbl = Path(gt_path, filename+'_labels.png')
-        #print(gt_lbl)
-        # GT instances file
+        # set GT instances file
         gt_ins = Path(gt_path, filename+'_instances.png')
-        #print(gt_ins)
+        # read class file
         gt_lbl_img = io.imread(str(gt_lbl))
         # get image size and number of pixel elements
         rows, cols, bands = gt_lbl_img.shape
@@ -287,14 +287,11 @@ def build_yolo_gt(argv, label_colors=None):
         if bands > 3:
             gt_lbl_img = gt_lbl_img[:,:,:3]
             bands = 3
-        # a) open GT instance file and get the objects
-        # for each colour in the instance
+        # open GT instance file and get individual
+        # objects per colour
         gt_objects = get_shapes_per_colour(gt_ins)
 
-        
-        #print(gt_objects)
-        # c) get the types assigned to each object fragment in predictions and GT
-        # d) compare to GT labels  to get TP and FP
+        # assing class to each object
         for an_object in gt_objects:
             for fragment in gt_objects[an_object]:
                 f_centre = getcontourcentre(fragment)
@@ -311,9 +308,8 @@ def build_yolo_gt(argv, label_colors=None):
                              "yolo_cx":f_centre[1]/cols, "yolo_cy": f_centre[0]/rows,
                              "yolo_height": (gt_corners[1][0]-gt_corners[0][0])/rows,
                              "yolo_width": (gt_corners[1][1] -gt_corners[0][1])/cols}
-                #new_id = insert_obj(conn, table_name, ob_values)
-                #print("object:", ob_values)#, "with id:", new_id)
                 indx += 1
+    # save results in ouptut file
     write_csv_data(ob_values,out_file)
     print("End:   ",datetime.now().strftime("%Y/%m/%d %H:%M:%S"))
 
